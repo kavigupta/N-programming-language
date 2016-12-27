@@ -9,15 +9,18 @@ import AST
 
 type Parser b = ParsecT String () Identity b
 
-parseN :: Parser AST
-parseN = do
+parseN :: String -> Either ParseError AST
+parseN = parse nParser "N"
+
+nParser :: Parser AST
+nParser = do
     se <- many $ do
         spaces
         lString <|> lNumber <|> code <|> parenthesized <|> braced <|> atom
     return $ case se of
         [x] -> x
         xs -> Sequence xs
-    
+
 atom :: Parser AST
 atom = do
     c <- noneOf "(){}`'"
@@ -47,6 +50,6 @@ lNumber = LNumber . read <$> (return <$> digit <|> multiDigit)
 surrounded :: Char -> Char -> (AST -> x) -> Parser x
 surrounded start end f = do
     char start
-    contents <- parseN
+    contents <- nParser
     char end
     return . f $ contents
