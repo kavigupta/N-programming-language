@@ -1,11 +1,14 @@
-module AST(ParsedAST(..)) where
+module AST(AST(..)) where
 
-data ParsedAST =
-      ParsedAtom Char
-    | ParsedLString String
-    | ParsedLNumber Integer
-    | ParsedCode ParsedAST
-    | Parenthesized ParsedAST
-    | Braced ParsedAST
-    | ParsedSequence [ParsedAST]
-        deriving Show
+data AST =
+      Symbol Char
+    | Definition
+    | Index
+    | Lookup
+    | Duplicate
+    | Execute
+    | Code AST
+    | LString String
+    | LNumber Integer
+    | Sequence [AST]
+    | NewFrame AST
