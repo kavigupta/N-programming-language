@@ -12,3 +12,4 @@ data AST =
     | LNumber Integer
     | Sequence [AST]
     | NewFrame AST
+        deriving (Show)
