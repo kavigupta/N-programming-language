@@ -7,6 +7,7 @@ data AST =
     | Lookup
     | Duplicate
     | Execute
+    | Self
     | Code [AST]
     | LString String
     | LNumber Integer

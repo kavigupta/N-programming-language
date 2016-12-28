@@ -1,8 +1,9 @@
 module Environment (Object(..), Environment(..), Frame, Stack, FullEnv, InterpreterError(..), Action, InterpAct, push, pop, deInterp, interp) where
 
-import AST
+import AST(AST, printCode)
 
 import Control.Monad.State
+import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Map hiding (map)
 import qualified Data.List as L
@@ -51,10 +52,10 @@ data InterpreterError
 
 type Action = FullEnv -> Either InterpreterError FullEnv
 
-type InterpAct x = StateT FullEnv (Either InterpreterError) x
+type InterpAct x = ReaderT Object (StateT FullEnv (Either InterpreterError)) x
 
 deInterp :: InterpAct () -> Action
-deInterp x = fmap snd . runStateT x
+deInterp x (e, s) = snd <$> runStateT (runReaderT x (Code [] e)) (e, s)
 
 interp :: Action -> InterpAct ()
 interp act = do

@@ -7,6 +7,7 @@ import Parser
 
 import Control.Monad.State
 import Control.Monad.Except
+import Control.Monad.Reader
 import Text.Parsec
 
 import qualified Data.List.Safe as S
@@ -31,6 +32,9 @@ interpret Definition = do
     top <- pop
     next <- pop
     top =:= next
+interpret Self = do
+    x <- ask
+    push x
 interpret Index = do
     index <- pop
     (_, s) <- get
@@ -54,7 +58,7 @@ interpret Execute = do
     code <- pop
     (e, s) <- get
     case code of
-        Environment.Code c e' -> do
+        Environment.Code c e' -> local (const code) $ do
             put (e', s)
             mapM_ interpret c
             (_, s') <- get

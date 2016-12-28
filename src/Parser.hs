@@ -24,6 +24,7 @@ atom = do
         '&' -> return Index
         '~' -> return Lookup
         ';' -> return Duplicate
+        '|' -> return Self
         '$' -> return Execute
         x   -> return $ Symbol x
 
