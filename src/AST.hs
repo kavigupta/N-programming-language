@@ -1,4 +1,4 @@
-module AST(AST(..)) where
+module AST(AST(..), printCode) where
 
 data AST =
       Symbol Char
@@ -13,3 +13,6 @@ data AST =
     | Sequence [AST]
     | NewFrame AST
         deriving (Show)
+
+printCode :: AST -> String
+printCode = show
