@@ -19,7 +19,7 @@ data SomeError = ParseError ParseError | RuntimeError InterpreterError
 runInterpreter :: String -> Either SomeError Stack
 runInterpreter input = case parseN input of
     Left err -> Left $ ParseError err
-    Right ast -> case deInterp (interpret ast) (Child M.empty Defaults, []) of
+    Right ast -> case deInterp (mapM_ interpret ast) (Child M.empty Defaults, []) of
         Left err -> Left $ RuntimeError err
         Right val -> Right $ snd val
 
@@ -56,7 +56,7 @@ interpret Execute = do
     case code of
         Environment.Code c e' -> do
             put (e', s)
-            interpret c
+            mapM_ interpret c
             (_, s') <- get
             put (e, s')
         Environment.PrimitiveFunction _ v -> v
@@ -67,7 +67,6 @@ interpret (AST.Code c) = do
     push (Environment.Code c e)
 interpret (LString s) = push (Str s)
 interpret (LNumber n) = push (Number n)
-interpret (Sequence s) = sequence_ . fmap interpret $ s
 interpret (NewFrame x) = do
     (e, s) <- get
     put (Child M.empty e, s)

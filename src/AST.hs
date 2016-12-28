@@ -7,10 +7,9 @@ data AST =
     | Lookup
     | Duplicate
     | Execute
-    | Code AST
+    | Code [AST]
     | LString String
     | LNumber Integer
-    | Sequence [AST]
     | NewFrame AST
         deriving (Show)
 

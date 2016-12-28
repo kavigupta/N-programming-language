@@ -4,13 +4,14 @@ import AST
 
 import Control.Monad.State
 import Control.Monad.Except
-import Data.Map
+import Data.Map hiding (map)
+import qualified Data.List as L
 
 data Object =
       Number Integer
     | Nil
     | Str String
-    | Code AST Environment
+    | Code [AST] Environment
     | Pair Object Object
     | PrimitiveFunction String (InterpAct ())
 
@@ -18,7 +19,7 @@ instance Show Object where
     show (Number x) = show x
     show Nil = "()"
     show (Str s) = show s
-    show (Environment.Code e _) = printCode e
+    show (Environment.Code e _) = "`" ++ L.intercalate "," (map printCode e) ++ "'"
     show (Pair car cdr) = "(" ++ withNoParens car cdr ++ ")"
     show (PrimitiveFunction name _) = "#" ++ name
 
