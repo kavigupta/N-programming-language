@@ -87,9 +87,9 @@ data InterpreterError
 
 -- type Action = FullEnv -> Either InterpreterError FullEnv
 
-type InterpAct x = ReaderT Object (StateT FullEnv (Either InterpreterError)) x
+type InterpAct x = ReaderT Object (StateT FullEnv (ReaderT String (Either InterpreterError))) x
 
-deInterp :: InterpAct () -> [Object] -> Either InterpreterError FullEnv
+deInterp :: InterpAct () -> [Object] -> ReaderT String (Either InterpreterError) FullEnv
 deInterp x initial = snd <$> runStateT (runReaderT x (Code [] newFrame)) (FullEnv newFrame $ Stack initial)
 -- 
 -- interp :: Action -> InterpAct ()

@@ -26,6 +26,7 @@ atom = do
         ';' -> return Duplicate
         '|' -> return Self
         '$' -> return Execute
+        'q' -> return Quine
         x   -> return $ Symbol x
 
 lString, code, braced, lNumber :: Parser AST

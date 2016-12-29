@@ -18,7 +18,7 @@ runInterpreter s v = result <$> debugInterpreter s v
 debugInterpreter :: String -> [Object] -> Either SomeError FullEnv
 debugInterpreter input inital = case parseN input of
     Left err -> Left $ ParseError err
-    Right ast -> case deInterp (mapM_ interpret ast) inital of
+    Right ast -> case runReaderT (deInterp (mapM_ interpret ast) inital) input of
         Left err -> Left $ RuntimeError err
         Right val -> Right val
 
@@ -49,6 +49,9 @@ interpret Duplicate = do
     x <- pop
     push x
     push x
+interpret Quine = do
+    program <- lift ask
+    push (Str program)
 interpret Execute = do
     code <- pop
     case code of
