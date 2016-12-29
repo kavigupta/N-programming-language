@@ -1,22 +1,23 @@
 module Environment (
     Object(..),
-    Environment(..),
-    Frame, FullEnv, startingEnv,
+    FullEnv,
     InterpreterError(..),
-    Action, InterpAct,
-    push, pop, indexStack, deInterp, interp, objEqual
+    InterpAct,
+    push, pop, indexStack,
+    newFrame, lookupE, (=:=),
+    objEqual,
+    deInterp
 ) where
 
 import AST(AST, printCode)
 
-import Prelude hiding((!!))
+import Prelude hiding((!!), lookup)
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Map hiding (map)
-import Data.List.Safe
+import Data.List.Safe hiding (lookup, insert)
 import qualified Data.List as L
-
 
 data Object =
       Number Integer
@@ -53,10 +54,8 @@ withNoParens car Nil = show car
 withNoParens car (Pair cadr cddr) = show car ++ " " ++ withNoParens cadr cddr
 withNoParens car cdr = show car ++ " . " ++ show cdr
 
-data Environment = Defaults | Child Frame Environment
-    deriving Show
-
-type Frame = Map String Object
+data Environment = Environment {mappings :: Map String Object}
+    deriving (Show)
 
 newtype Stack = Stack [Object]
     deriving (Show)
@@ -76,22 +75,22 @@ data InterpreterError
     | CannotCompareCodeError
         deriving Show
 
-type Action = FullEnv -> Either InterpreterError FullEnv
+-- type Action = FullEnv -> Either InterpreterError FullEnv
 
 type InterpAct x = ReaderT Object (StateT FullEnv (Either InterpreterError)) x
 
-deInterp :: InterpAct () -> Action
-deInterp x (e, s) = snd <$> runStateT (runReaderT x (Code [] e)) (e, s)
-
-interp :: Action -> InterpAct ()
-interp act = do
-    es <- get
-    case act es of
-        Left err -> throwError err
-        Right x -> put x
+deInterp :: InterpAct () -> Either InterpreterError FullEnv
+deInterp x = snd <$> runStateT (runReaderT x (Code [] newFrame)) startingEnv
+-- 
+-- interp :: Action -> InterpAct ()
+-- interp act = do
+--     es <- get
+--     case act es of
+--         Left err -> throwError err
+--         Right x -> put x
 
 startingEnv :: FullEnv
-startingEnv = (Child empty Defaults, Stack [])
+startingEnv = (newFrame, Stack [])
 
 push :: Object -> InterpAct ()
 push x = do
@@ -113,3 +112,28 @@ indexStack n = do
     case s !! n of
         Nothing -> throwError StackUnderflow
         Just x -> return x
+
+type Defaults = Bool -> String -> InterpAct Object
+
+lookupE :: Defaults -> Bool -> String -> InterpAct Object
+lookupE indexBuiltinFunction implicitLiteral s = do
+    (frames, _) <- get
+    lookupIn indexBuiltinFunction implicitLiteral frames s
+
+lookupIn :: Defaults -> Bool -> Environment -> String -> InterpAct Object
+lookupIn indexBuiltinFunction implicitLiteral f s = case s `lookup` mappings f of
+        Nothing -> indexBuiltinFunction implicitLiteral s
+        (Just x) -> return x
+
+(=:=) :: Object -> Object -> InterpAct ()
+(Str var) =:= val   = do
+    (Environment f, s) <- get
+    
+    if var `member` f then
+        throwError $ MultipleAssignmentError var
+    else
+        put (Environment $ insert var val f, s)
+var =:= _  = throwError $ BindingToNonStringError var
+
+newFrame :: Environment
+newFrame = Environment empty
