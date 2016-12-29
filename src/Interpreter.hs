@@ -26,7 +26,7 @@ runInterpreter input = case parseN input of
 
 interpret :: AST -> InterpAct ()
 interpret (Symbol c) = do
-    x <- lookupE [c]
+    x <- lookupE True [c]
     push x
 interpret Definition = do
     top <- pop
@@ -47,7 +47,7 @@ interpret Lookup = do
     name <- pop
     case name of
         Str s -> do
-            val <- lookupE s
+            val <- lookupE False s
             push val
         o -> throwError $ LookingUpNonStringError o
 interpret Duplicate = do
@@ -79,16 +79,16 @@ interpret (NewFrame x) = do
     put (e', s')
 
     
-lookupE :: String -> InterpAct Object
-lookupE s = do
+lookupE :: Bool -> String -> InterpAct Object
+lookupE implicitLiteral s = do
     (frames, _) <- get
-    lookupIn frames s
+    lookupIn implicitLiteral frames s
 
-lookupIn :: Environment -> String -> InterpAct Object
-lookupIn frames s = case frames of
-    Defaults -> indexBuiltinFunction s
+lookupIn :: Bool -> Environment -> String -> InterpAct Object
+lookupIn implicitLiteral frames s = case frames of
+    Defaults -> indexBuiltinFunction implicitLiteral s
     (Child f fs) -> case s `M.lookup` f of
-        Nothing -> lookupIn fs s
+        Nothing -> lookupIn implicitLiteral fs s
         (Just x) -> return x
 
 (=:=) :: Object -> Object -> InterpAct ()

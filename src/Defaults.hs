@@ -4,12 +4,13 @@ import Control.Monad.Except
 
 import Environment
 
-indexBuiltinFunction :: String -> InterpAct Object
-indexBuiltinFunction "+" = numberOperator "+" (+)
-indexBuiltinFunction "-" = numberOperator "-" (-)
-indexBuiltinFunction "*" = numberOperator "*" (*)
-indexBuiltinFunction "/" = numberOperator "/" div
-indexBuiltinFunction name = throwError $ UnboundVariable name
+indexBuiltinFunction :: Bool -> String -> InterpAct Object
+indexBuiltinFunction _ "+" = numberOperator "+" (+)
+indexBuiltinFunction _ "-" = numberOperator "-" (-)
+indexBuiltinFunction _ "*" = numberOperator "*" (*)
+indexBuiltinFunction _ "/" = numberOperator "/" div
+indexBuiltinFunction True name = return $ Str name
+indexBuiltinFunction False name = throwError $ UnboundVariable name
 
 numberOperator :: String -> (Integer -> Integer -> Integer) -> InterpAct Object
 numberOperator name (#) = return $ PrimitiveFunction name $ do

@@ -12,7 +12,7 @@ data AST =
     | LString String
     | LNumber Integer
     | NewFrame AST
-        deriving (Show)
+        deriving (Show, Eq)
 
 printCode :: AST -> String
 printCode = show
