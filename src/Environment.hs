@@ -27,7 +27,7 @@ instance Show Object where
     show (Number x) = show x
     show Nil = "()"
     show (Str s) = show s
-    show (Environment.Code e _) = "`" ++ L.intercalate "," (map printCode e) ++ "'"
+    show (Environment.Code c e) = "[" ++ L.intercalate "," (map printCode c) ++ "]" ++ show e
     show (Pair car cdr) = "(" ++ withNoParens car cdr ++ ")"
     show (PrimitiveFunction name _) = "#" ++ name
 
@@ -50,8 +50,8 @@ withNoParens car Nil = show car
 withNoParens car (Pair cadr cddr) = show car ++ " " ++ withNoParens cadr cddr
 withNoParens car cdr = show car ++ " . " ++ show cdr
 
-
 data Environment = Defaults | Child Frame Environment
+    deriving Show
 
 type Frame = Map String Object
 

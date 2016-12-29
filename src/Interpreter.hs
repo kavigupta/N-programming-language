@@ -17,12 +17,12 @@ import qualified Data.Map as M
 data SomeError = ParseError ParseError | RuntimeError InterpreterError
     deriving Show
 
-runInterpreter :: String -> Either SomeError Stack
+runInterpreter :: String -> Either SomeError FullEnv
 runInterpreter input = case parseN input of
     Left err -> Left $ ParseError err
-    Right ast -> case deInterp (mapM_ interpret ast) (Child M.empty Defaults, []) of
+    Right ast -> case deInterp (mapM_ interpret ast) startingEnv of
         Left err -> Left $ RuntimeError err
-        Right val -> Right $ snd val
+        Right val -> Right val
 
 interpret :: AST -> InterpAct ()
 interpret (Symbol c) = do
@@ -39,9 +39,7 @@ interpret Index = do
     index <- pop
     (_, s) <- get
     case index of
-        Number n -> case s S.!! n of
-            Nothing -> throwError StackUnderflow
-            Just x -> push x
+        Number n -> indexStack n >> push
         o -> throwError $ IndexingWithNonNumberError o
 interpret Lookup = do
     name <- pop
@@ -100,5 +98,3 @@ lookupIn implicitLiteral frames s = case frames of
             | var `M.member` f  -> throwError $ MultipleAssignmentError var
             | otherwise         -> put (Child (M.insert var val f) fs, s)
 var =:= _  = throwError $ BindingToNonStringError var
-
--- pop :: Object -> State FullEnv ()
