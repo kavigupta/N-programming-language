@@ -13,7 +13,7 @@ This function first stores its argument and itself in its environment. It then p
 
 ## Program that Prints Characters Not In Program
 
-[Code Golf Question](http://codegolf.stackexchange.com/questions/12368/print-every-character-your-program-doesnt-have/12373#12373).
+[Code Golf Question](http://codegolf.stackexchange.com/questions/12368/print-every-character-your-program-doesnt-have/12373).
 
 ```N
 ql$#126#32r$-$s$
