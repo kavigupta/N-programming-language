@@ -8,7 +8,8 @@ module Environment (
     newFrame, lookupE, (=:=),
     objEqual,
     deInterp,
-    saveAndRestoreEnvironment
+    saveAndRestoreEnvironment,
+    result
 ) where
 
 import AST(AST, printCode)
@@ -88,8 +89,8 @@ data InterpreterError
 
 type InterpAct x = ReaderT Object (StateT FullEnv (Either InterpreterError)) x
 
-deInterp :: InterpAct () -> Either InterpreterError FullEnv
-deInterp x = snd <$> runStateT (runReaderT x (Code [] newFrame)) startingEnv
+deInterp :: InterpAct () -> [Object] -> Either InterpreterError FullEnv
+deInterp x initial = snd <$> runStateT (runReaderT x (Code [] newFrame)) (FullEnv newFrame $ Stack initial)
 -- 
 -- interp :: Action -> InterpAct ()
 -- interp act = do
@@ -97,9 +98,6 @@ deInterp x = snd <$> runStateT (runReaderT x (Code [] newFrame)) startingEnv
 --     case act es of
 --         Left err -> throwError err
 --         Right x -> put x
-
-startingEnv :: FullEnv
-startingEnv = FullEnv newFrame (Stack [])
 
 push :: Object -> InterpAct ()
 push x = do
@@ -168,3 +166,6 @@ saveAndRestoreEnvironment act = do
     (FullEnv e _) <- get
     act
     setEnv e
+
+result :: FullEnv -> [Object]
+result FullEnv {stack=Stack l} = l

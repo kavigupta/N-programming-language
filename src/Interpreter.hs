@@ -1,4 +1,4 @@
-module Interpreter(interpret, deInterp, runInterpreter) where
+module Interpreter(interpret, deInterp, debugInterpreter, runInterpreter) where
     
 import Environment
 import AST
@@ -12,10 +12,13 @@ import Text.Parsec
 data SomeError = ParseError ParseError | RuntimeError InterpreterError
     deriving Show
 
-runInterpreter :: String -> Either SomeError FullEnv
-runInterpreter input = case parseN input of
+runInterpreter :: String -> [Object] -> Either SomeError [Object]
+runInterpreter s v = result <$> debugInterpreter s v
+
+debugInterpreter :: String -> [Object] -> Either SomeError FullEnv
+debugInterpreter input inital = case parseN input of
     Left err -> Left $ ParseError err
-    Right ast -> case deInterp (mapM_ interpret ast) of
+    Right ast -> case deInterp (mapM_ interpret ast) inital of
         Left err -> Left $ RuntimeError err
         Right val -> Right val
 
