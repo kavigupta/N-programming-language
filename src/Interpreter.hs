@@ -10,8 +10,6 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import Text.Parsec
 
-import qualified Data.List.Safe as S
-
 import qualified Data.Map as M
 
 data SomeError = ParseError ParseError | RuntimeError InterpreterError
@@ -37,9 +35,8 @@ interpret Self = do
     push x
 interpret Index = do
     index <- pop
-    (_, s) <- get
     case index of
-        Number n -> indexStack n >> push
+        Number n -> indexStack n >>= push
         o -> throwError $ IndexingWithNonNumberError o
 interpret Lookup = do
     name <- pop

@@ -1,19 +1,22 @@
 module Environment (
     Object(..),
     Environment(..),
-    Frame, Stack, FullEnv,
+    Frame, FullEnv, startingEnv,
     InterpreterError(..),
     Action, InterpAct,
-    push, pop, deInterp, interp, objEqual
+    push, pop, indexStack, deInterp, interp, objEqual
 ) where
 
 import AST(AST, printCode)
 
+import Prelude hiding((!!))
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Map hiding (map)
+import Data.List.Safe
 import qualified Data.List as L
+
 
 data Object =
       Number Integer
@@ -55,7 +58,8 @@ data Environment = Defaults | Child Frame Environment
 
 type Frame = Map String Object
 
-type Stack = [Object]
+newtype Stack = Stack [Object]
+    deriving (Show)
 
 type FullEnv = (Environment, Stack)
 
@@ -86,18 +90,26 @@ interp act = do
         Left err -> throwError err
         Right x -> put x
 
+startingEnv :: FullEnv
+startingEnv = (Child empty Defaults, Stack [])
+
 push :: Object -> InterpAct ()
 push x = do
-    (e, s) <- get
-    put (e, x:s)
+    (e, Stack s) <- get
+    put (e, Stack $ x:s)
 
 pop :: InterpAct Object
 pop = do
     (e, s) <- get
     case s of
-        [] -> throwError StackUnderflow
-        (o:os) -> do
-            put (e, os)
+        Stack [] -> throwError StackUnderflow
+        Stack (o:os) -> do
+            put (e, Stack os)
             return o
 
-
+indexStack :: Integer -> InterpAct Object
+indexStack n = do
+    (_, Stack s) <- get
+    case s !! n of
+        Nothing -> throwError StackUnderflow
+        Just x -> return x
