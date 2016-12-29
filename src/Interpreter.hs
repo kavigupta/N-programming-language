@@ -5,7 +5,6 @@ import AST
 import Defaults
 import Parser
 
-import Control.Monad.State
 import Control.Monad.Except
 import Control.Monad.Reader
 import Text.Parsec
@@ -49,24 +48,18 @@ interpret Duplicate = do
     push x
 interpret Execute = do
     code <- pop
-    (e, s) <- get
     case code of
-        Environment.Code c e' -> local (const code) $ do
-            put (e', s)
+        Environment.Code c e' -> local (const code) . saveAndRestoreEnvironment $ do
+            setEnv e'
             mapM_ interpret c
-            (_, s') <- get
-            put (e, s')
         Environment.PrimitiveFunction _ v -> v
             
         o -> throwError $ ExecutedNonCodeError o
 interpret (AST.Code c) = do
-    (e, _) <- get
+    e <- getEnv
     push (Environment.Code c e)
 interpret (LString s) = push (Str s)
 interpret (LNumber n) = push (Number n)
-interpret (NewFrame x) = do
-    (e, s) <- get
-    put (newFrame, s)
+interpret (NewFrame x) = saveAndRestoreEnvironment $ do
+    setEnv newFrame
     interpret x
-    (_, s') <- get
-    put (e, s')

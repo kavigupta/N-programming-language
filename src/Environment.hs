@@ -3,10 +3,12 @@ module Environment (
     FullEnv,
     InterpreterError(..),
     InterpAct,
+    getEnv, setEnv,
     push, pop, indexStack,
     newFrame, lookupE, (=:=),
     objEqual,
-    deInterp
+    deInterp,
+    saveAndRestoreEnvironment
 ) where
 
 import AST(AST, printCode)
@@ -60,7 +62,8 @@ data Environment = Environment {mappings :: Map String Object}
 newtype Stack = Stack [Object]
     deriving (Show)
 
-type FullEnv = (Environment, Stack)
+data FullEnv = FullEnv {environment :: Environment, stack :: Stack}
+    deriving Show
 
 data InterpreterError
     = UnboundVariable String
@@ -90,25 +93,25 @@ deInterp x = snd <$> runStateT (runReaderT x (Code [] newFrame)) startingEnv
 --         Right x -> put x
 
 startingEnv :: FullEnv
-startingEnv = (newFrame, Stack [])
+startingEnv = FullEnv newFrame (Stack [])
 
 push :: Object -> InterpAct ()
 push x = do
-    (e, Stack s) <- get
-    put (e, Stack $ x:s)
+    (Stack s) <- getStack
+    setStack . Stack $ x : s
 
 pop :: InterpAct Object
 pop = do
-    (e, s) <- get
+    s <- getStack
     case s of
         Stack [] -> throwError StackUnderflow
         Stack (o:os) -> do
-            put (e, Stack os)
+            setStack $ Stack os
             return o
 
 indexStack :: Integer -> InterpAct Object
 indexStack n = do
-    (_, Stack s) <- get
+    (Stack s) <- getStack
     case s !! n of
         Nothing -> throwError StackUnderflow
         Just x -> return x
@@ -117,7 +120,7 @@ type Defaults = Bool -> String -> InterpAct Object
 
 lookupE :: Defaults -> Bool -> String -> InterpAct Object
 lookupE indexBuiltinFunction implicitLiteral s = do
-    (frames, _) <- get
+    (FullEnv frames _) <- get
     lookupIn indexBuiltinFunction implicitLiteral frames s
 
 lookupIn :: Defaults -> Bool -> Environment -> String -> InterpAct Object
@@ -127,13 +130,35 @@ lookupIn indexBuiltinFunction implicitLiteral f s = case s `lookup` mappings f o
 
 (=:=) :: Object -> Object -> InterpAct ()
 (Str var) =:= val   = do
-    (Environment f, s) <- get
+    (FullEnv (Environment f) s) <- get
     
     if var `member` f then
         throwError $ MultipleAssignmentError var
     else
-        put (Environment $ insert var val f, s)
+        put $ FullEnv (Environment $ insert var val f) s
 var =:= _  = throwError $ BindingToNonStringError var
 
 newFrame :: Environment
 newFrame = Environment empty
+
+getStack :: InterpAct Stack
+getStack = stack <$> get
+
+setStack :: Stack -> InterpAct ()
+setStack s = do
+    e <- getEnv
+    put (FullEnv e s)
+
+getEnv :: InterpAct Environment
+getEnv = environment <$> get
+
+setEnv :: Environment -> InterpAct ()
+setEnv e = do
+    s <- getStack
+    put (FullEnv e s)
+
+saveAndRestoreEnvironment :: InterpAct () -> InterpAct ()
+saveAndRestoreEnvironment act = do
+    (FullEnv e _) <- get
+    act
+    setEnv e
