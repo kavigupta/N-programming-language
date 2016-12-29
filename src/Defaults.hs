@@ -31,7 +31,7 @@ truthy (Pair _ _) = True
 truthy (PrimitiveFunction _ _) = True
 
 numberOperator :: String -> (Integer -> Integer -> Integer) -> InterpAct Object
-numberOperator name (#) = return $ PrimitiveFunction name $ do
+numberOperator name (#) = return . PrimitiveFunction name $ do
     x <- pop
     y <- pop
     case (x, y) of
