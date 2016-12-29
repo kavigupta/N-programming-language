@@ -2,7 +2,7 @@ module Defaults(indexBuiltinFunction) where
 
 import Prelude hiding (lookup)
 import Control.Monad.Except
-import Data.Map hiding (foldr, map)
+import Data.Map hiding (foldr, map, (\\), filter)
 import Data.Char
 
 import Environment
@@ -10,12 +10,13 @@ import Environment
 builtins :: Map String (InterpAct ())
 builtins = fromList [
         ("+", numberOperator (+)),
-        ("-", numberOperator (-)),
+        ("-", sub),
         ("*", numberOperator (*)),
         ("/", numberOperator div),
         ("?", ifthenelse),
         ("=", equality),
-        ("l", list)
+        ("l", list),
+        ("r", range)
     ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct Object
@@ -53,19 +54,49 @@ list = do
                 | x < 0 -> err
                 | otherwise -> do
                     items <- replicateM (fromInteger x) pop
-                    push $ foldr Pair Nil items
-            Nil -> push Nil
-            (Pair a b) -> push $ dedotify a b
-            Str s -> push $ foldr (Pair . cTn) Nil s
-            _ -> err
+                    push $ toObject items
+            x -> toObject <$> listify x >>= push
     where
-    err = throwError . BuiltinTypeError $ "#l requires an integer and then a sequence of elements or another container"
-    cTn = Number . toInteger . ord
+    err = throwError . BuiltinTypeError $ "#l cannot be called on a negative"
 
-dedotify :: Object -> Object -> Object
-dedotify car Nil = Pair car Nil
-dedotify car (Pair cadr cddr) = Pair car $ dedotify cadr cddr
-dedotify car cdr = Pair car (Pair cdr Nil)
+range :: InterpAct ()
+range = do
+    lo <- pop
+    hi <- pop
+    case (lo, hi) of
+        (Number l, Number h) -> push $ toObject [l..h]
+        _ -> throwError . BuiltinTypeError $ "#r requires two numbers to produce a range"
+
+sub :: InterpAct ()
+sub = do
+    x' <- pop
+    y' <- pop
+    case (x', y') of
+        (Number x, Number y) -> push . Number $ x - y
+        _ -> do
+            x <- listify x'
+            y <- listify y'
+            filterd <- filterM (notIn y) x
+            push . toObject $ filterd
+    where
+    notIn :: [Object] -> Object -> InterpAct Bool
+    notIn [] _ = return True
+    notIn (x:xs) y = do
+        v <- objEqual x y
+        if v then return False else notIn xs y
+
+listify :: Object -> InterpAct [Object]
+listify Nil = return []
+listify (Pair a b) = return $ dedotify a b
+listify (Str s) = return $ map cTn s
+    where
+    cTn = Number . toInteger . ord
+listify x = throwError . BuiltinTypeError $ "Unable to listify " ++ show x
+
+dedotify :: Object -> Object -> [Object]
+dedotify car Nil = [car]
+dedotify car (Pair cadr cddr) = car : dedotify cadr cddr
+dedotify car cdr = [car, cdr]
 
 numberOperator :: (Integer -> Integer -> Integer) -> InterpAct ()
 numberOperator (#) = do
@@ -76,3 +107,14 @@ numberOperator (#) = do
         _ -> throwError . BuiltinTypeError $
                 "Builtin requires two Integers but received " ++ show x ++ " and " ++ show y
 
+instance Objectifiable Integer where
+    toObject = Number
+
+class Objectifiable a where
+    toObject :: a -> Object
+
+instance Objectifiable Object where
+    toObject = id
+
+instance (Objectifiable a) => Objectifiable [a] where
+    toObject = foldr (Pair . toObject) Nil
