@@ -2,7 +2,8 @@ module Defaults(indexBuiltinFunction) where
 
 import Prelude hiding (lookup)
 import Control.Monad.Except
-import Data.Map
+import Data.Map hiding (foldr, map)
+import Data.Char
 
 import Environment
 
@@ -13,7 +14,8 @@ builtins = fromList [
         ("*", numberOperator (*)),
         ("/", numberOperator div),
         ("?", ifthenelse),
-        ("=", equality)
+        ("=", equality),
+        ("l", list)
     ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct Object
@@ -42,6 +44,28 @@ equality = do
     rhs <- pop
     areEq <- objEqual lhs rhs
     push . Number $ if areEq then 1 else 0
+
+list :: InterpAct ()
+list = do
+        top <- pop
+        case top of
+            Number x
+                | x < 0 -> err
+                | otherwise -> do
+                    items <- replicateM (fromInteger x) pop
+                    push $ foldr Pair Nil items
+            Nil -> push Nil
+            (Pair a b) -> push $ dedotify a b
+            Str s -> push $ foldr (Pair . cTn) Nil s
+            _ -> err
+    where
+    err = throwError . BuiltinTypeError $ "#l requires an integer and then a sequence of elements or another container"
+    cTn = Number . toInteger . ord
+
+dedotify :: Object -> Object -> Object
+dedotify car Nil = Pair car Nil
+dedotify car (Pair cadr cddr) = Pair car $ dedotify cadr cddr
+dedotify car cdr = Pair car (Pair cdr Nil)
 
 numberOperator :: (Integer -> Integer -> Integer) -> InterpAct ()
 numberOperator (#) = do
