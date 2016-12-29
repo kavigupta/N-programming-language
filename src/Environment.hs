@@ -1,4 +1,11 @@
-module Environment (Object(..), Environment(..), Frame, Stack, FullEnv, InterpreterError(..), Action, InterpAct, push, pop, deInterp, interp) where
+module Environment (
+    Object(..),
+    Environment(..),
+    Frame, Stack, FullEnv,
+    InterpreterError(..),
+    Action, InterpAct,
+    push, pop, deInterp, interp, objEqual
+) where
 
 import AST(AST, printCode)
 
@@ -24,6 +31,20 @@ instance Show Object where
     show (Pair car cdr) = "(" ++ withNoParens car cdr ++ ")"
     show (PrimitiveFunction name _) = "#" ++ name
 
+objEqual :: Object -> Object -> InterpAct Bool
+objEqual (Number x) (Number y)  = return $ x == y
+objEqual (Number _) _           = return False
+objEqual (Str x) (Str y)        = return $ x == y
+objEqual (Str _) _              = return False
+objEqual Nil Nil                = return True
+objEqual Nil _                  = return False
+objEqual (Pair a b) (Pair c d)  = (&&) <$> objEqual a c <*> objEqual b d
+objEqual (Pair _ _) _           = return False
+objEqual (Code _ _) (Code _ _)  = throwError CannotCompareCodeError
+objEqual (Code _ _) _           = return False
+objEqual (PrimitiveFunction x _) (PrimitiveFunction y _) = return $ x == y
+objEqual (PrimitiveFunction _ _) _ = return False
+
 withNoParens :: Object -> Object -> String
 withNoParens car Nil = show car
 withNoParens car (Pair cadr cddr) = show car ++ " " ++ withNoParens cadr cddr
@@ -48,6 +69,7 @@ data InterpreterError
     | IndexingWithNonNumberError Object
     | ExecutedNonCodeError Object
     | BuiltinTypeError String
+    | CannotCompareCodeError
         deriving Show
 
 type Action = FullEnv -> Either InterpreterError FullEnv
