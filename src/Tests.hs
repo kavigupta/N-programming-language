@@ -23,4 +23,4 @@ nonContents = case runInterpreter code [] of
         (Right [Str s]) -> (sort . nub $ s ++ code) == ['\x20'..'\x7e']
         _ -> False
     where
-    code = "ql$#127#32r$-$s$"
+    code = "ql$#126#32r$-$s$"
