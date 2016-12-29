@@ -16,7 +16,8 @@ builtins = fromList [
         ("?", ifthenelse),
         ("=", equality),
         ("l", list),
-        ("r", range)
+        ("r", range),
+        ("s", string)
     ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct Object
@@ -92,6 +93,19 @@ listify (Str s) = return $ map cTn s
     where
     cTn = Number . toInteger . ord
 listify x = throwError . BuiltinTypeError $ "Unable to listify " ++ show x
+
+
+string :: InterpAct ()
+string = do
+        x <- pop
+        lst <- listify x
+        str <- mapM toCharacter lst
+        push . Str $ str
+    where
+    toCharacter :: Object -> InterpAct Char
+    toCharacter (Number e') = return $ chr . fromInteger $ e'
+    toCharacter e = throwError . BuiltinTypeError $ "Non-codepoint in toString " ++ show e
+
 
 dedotify :: Object -> Object -> [Object]
 dedotify car Nil = [car]
