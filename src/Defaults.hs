@@ -22,11 +22,16 @@ builtins = fromList [
         ("s", string),
         ("·", getEnv >>= push . Code []),
         ("p", typedPrint),
-        ("i", input)
+        ("i", input),
+        (",", cons),
+        (".", deCons),
+        ("n", nullN)
     ]
 library :: Map String String
 library = fromList [
-        ("!", "{N@|F@(N1N-$F$*$)(1)0N=$?$$}$")
+        ("!", "{N@|F@(N1N-$F$*$)(1)0N=$?$$}$"),
+        ("e", "0r$"),
+        ("∑", "0{N@|S@(.$N+$S$)(`N)2&n$?$$}$")
     ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct Object
@@ -135,6 +140,26 @@ input = do
         Number 0 -> push . Str $ line
         Number 1 -> push . Number . read $ line
         _ -> throwError . BuiltinTypeError $ "Invalid read mode " ++ show mode
+
+cons :: InterpAct ()
+cons = do
+    car <- pop
+    cdr <- pop
+    push $ Pair car cdr
+
+deCons :: InterpAct ()
+deCons = do
+    lis <- pop
+    case lis of
+        Pair car cdr -> push cdr >> push car
+        o -> throwError . BuiltinTypeError $ "Tried to unpack " ++ show o
+
+nullN :: InterpAct ()
+nullN = do
+    lis <- pop
+    push . Number $ case lis of
+        Nil -> 1
+        _ -> 0
 
 dedotify :: Object -> Object -> [Object]
 dedotify car Nil = [car]
