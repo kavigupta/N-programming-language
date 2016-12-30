@@ -18,7 +18,7 @@ factorial :: Property
 factorial = monadicIO $ do
     n <- pick arbitrary
     pre $ n >= 0
-    x <- run $ runInterpreter "{n@|!@(n1n-$!$*$)(1)0n=$?$$}$" [Number n]
+    x <- run $ runInterpreter "!$" [Number n]
     assert $ case x of
                 (Right [Number f]) -> f == product [1..n]
                 _ -> False

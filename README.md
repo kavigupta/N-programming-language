@@ -6,10 +6,10 @@ A stack-based lazy language designed for brevity
 ## Factorial Function
 
 ```N
-{n@|!@(n1n-$!$*$)(1)0n=$?$$}
+{N@|F@(N1N-$F$*$)(1)0N=$?$$}$
 ```
 
-This function first stores its argument and itself in its environment. It then pushes code blocks for the two cases in its if block onto the stack and conditionally evaluates one of them.
+This function (from the standard library) first stores its argument and itself in its environment. It then pushes code blocks for the two cases in its if block onto the stack and conditionally evaluates one of them.
 
 ## Program that Prints Characters Not In Program
 

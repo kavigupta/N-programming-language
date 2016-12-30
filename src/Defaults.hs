@@ -6,6 +6,7 @@ import Data.Map hiding (foldr, map, (\\), filter)
 import Data.Char
 
 import Environment
+import Parser
 
 builtins :: Map String (InterpAct ())
 builtins = fromList [
@@ -22,11 +23,21 @@ builtins = fromList [
         ("p", typedPrint),
         ("i", input)
     ]
+library :: Map String String
+library = fromList [
+        ("!", "{N@|F@(N1N-$F$*$)(1)0N=$?$$}$")
+    ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct Object
 indexBuiltinFunction implicitLiteral name = case lookup name builtins of
-    Nothing -> if implicitLiteral then return $ Str name else throwError $ UnboundVariable name
     Just x -> return . PrimitiveFunction name $ x
+    Nothing -> case lookup name library of
+        Just x -> case parseN x of
+            Left err -> throwError $ LibraryError err
+            Right ast -> do
+                e <- getEnv
+                return $ Code ast e
+        Nothing -> if implicitLiteral then return $ Str name else throwError $ UnboundVariable name
 
 truthy :: Object -> Bool
 truthy (Number x) = x /= 0

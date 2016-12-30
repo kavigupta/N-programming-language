@@ -22,6 +22,8 @@ import Data.Map hiding (map)
 import Data.List.Safe hiding (lookup, insert)
 import qualified Data.List as L
 
+import Text.Parsec
+
 data Object =
       Number Integer
     | Nil
@@ -83,6 +85,7 @@ data InterpreterError
     | ExecutedNonCodeError Object
     | BuiltinTypeError String
     | CannotCompareCodeError
+    | LibraryError ParseError
         deriving Show
 
 -- type Action = FullEnv -> Either InterpreterError FullEnv
