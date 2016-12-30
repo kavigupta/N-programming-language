@@ -6,10 +6,10 @@ A stack-based lazy language designed for brevity
 ## Factorial Function
 
 ```N
-{N@|F@(N1N-$F$*$)(1)0N=$?$$}$
+{N@(N1N-$1¦*$)(1)0N=$?$$}$
 ```
 
-This function (from the standard library) first stores its argument and itself in its environment. It then pushes code blocks for the two cases in its if block onto the stack and conditionally evaluates one of them.
+This function (from the standard library) first stores its argument. It then pushes code blocks for the two cases in its if block onto the stack and conditionally evaluates one of them.
 
 ## Program that Prints Characters Not In Program
 
@@ -30,3 +30,21 @@ Pushes the program's source (`q`) then converts to a list of codepoints (`l$`), 
 ```
 
 This reads an integer from STDIN, then runs a program that prints the top of the stack at least once but then exits if and only if its a 0.
+
+## Sum of a List
+
+```N
+0{N@(.$N+$1¦)(`N)2&n$?$$}$
+```
+
+This program takes pushes 0 to the stack, then repeatedly removes the top of the list and adds it to this number.
+
+## Machine that Runs Indefinitely But Halts
+
+[Code Golf Question](http://codegolf.stackexchange.com/questions/36747/if-a-program-terminates-and-there-is-no-one-to-see-it-does-it-halt).
+
+```N
+9!$!$e$∑$
+```
+
+This calculates the factorial of the factorial of 9 (a number on the order of `10^1859933`) creates a list from 0 to that number, and then computes the sum of that list.

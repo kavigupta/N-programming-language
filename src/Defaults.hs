@@ -29,9 +29,9 @@ builtins = fromList [
     ]
 library :: Map String String
 library = fromList [
-        ("!", "{N@|F@(N1N-$F$*$)(1)0N=$?$$}$"),
+        ("!", "{N@(N1N-$1¦*$)(1)0N=$?$$}$"),
         ("e", "0r$"),
-        ("∑", "0{N@|S@(.$N+$S$)(`N)2&n$?$$}$")
+        ("∑", "0{N@(.$N+$1¦)(`N)2&n$?$$}$")
     ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct Object
