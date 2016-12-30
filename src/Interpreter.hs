@@ -12,15 +12,17 @@ import Text.Parsec
 data SomeError = ParseError ParseError | RuntimeError InterpreterError
     deriving Show
 
-runInterpreter :: String -> [Object] -> Either SomeError [Object]
-runInterpreter s v = result <$> debugInterpreter s v
+runInterpreter :: String -> [Object] -> IO (Either SomeError [Object])
+runInterpreter s v = fmap result <$> debugInterpreter s v
 
-debugInterpreter :: String -> [Object] -> Either SomeError FullEnv
+debugInterpreter :: String -> [Object] -> IO (Either SomeError FullEnv)
 debugInterpreter input inital = case parseN input of
-    Left err -> Left $ ParseError err
-    Right ast -> case runReaderT (deInterp (mapM_ interpret ast) inital) input of
-        Left err -> Left $ RuntimeError err
-        Right val -> Right val
+    Left err -> return . Left $ ParseError err
+    Right ast -> do 
+        v <- runExceptT $ runReaderT (deInterp (mapM_ interpret ast) inital) input
+        case v of
+            Left err -> return . Left $ RuntimeError err
+            Right val -> return . Right $ val
 
 interpret :: AST -> InterpAct ()
 interpret (Symbol c) = do
