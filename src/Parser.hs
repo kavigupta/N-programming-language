@@ -18,7 +18,7 @@ nParser = many $ do
         lString <|> lNumber <|> code <|> braced <|> atom
 atom :: Parser AST
 atom = do
-    c <- noneOf "(){}"
+    c <- noneOf "(){}#"
     case c of
         '@' -> return Definition
         '&' -> return Index
