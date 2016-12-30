@@ -10,6 +10,7 @@ import Parser
 
 builtins :: Map String (InterpAct ())
 builtins = fromList [
+        ("`", void pop),
         ("+", numberOperator (+)),
         ("-", sub),
         ("*", numberOperator (*)),
