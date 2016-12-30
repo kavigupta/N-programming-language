@@ -9,7 +9,7 @@ module Environment (
     objEqual,
     deInterp,
     saveAndRestoreEnvironment,
-    result
+    result, contents
 ) where
 
 import AST(AST, printCode)
@@ -89,8 +89,8 @@ data InterpreterError
 
 type InterpAct x = ReaderT Object (StateT FullEnv (ReaderT String (ExceptT InterpreterError IO))) x
 
-deInterp :: InterpAct () -> [Object] -> [AST] -> ReaderT String (ExceptT InterpreterError IO) FullEnv
-deInterp x initial ast = snd <$> runStateT (runReaderT x (Code ast newFrame)) (FullEnv newFrame $ Stack initial)
+deInterp :: InterpAct () -> Map String Object -> [Object] -> [AST] -> ReaderT String (ExceptT InterpreterError IO) FullEnv
+deInterp x items initial ast = snd <$> runStateT (runReaderT x (Code ast newFrame)) (FullEnv (Environment items) $ Stack initial)
 -- 
 -- interp :: Action -> InterpAct ()
 -- interp act = do
@@ -169,3 +169,6 @@ saveAndRestoreEnvironment act = do
 
 result :: FullEnv -> [Object]
 result FullEnv {stack=Stack l} = l
+
+contents :: FullEnv -> Map String Object
+contents FullEnv {environment=Environment e} = e

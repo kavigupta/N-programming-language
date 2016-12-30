@@ -1,4 +1,4 @@
-module Interpreter(interpret, deInterp, debugInterpreter, runInterpreter) where
+module Interpreter(interpret, deInterp, fullInterpreter, runInterpreter) where
     
 import Environment
 import AST
@@ -9,20 +9,22 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import Text.Parsec
 
+import qualified Data.Map as M
+
 data SomeError = ParseError ParseError | RuntimeError InterpreterError
     deriving Show
 
 runInterpreter :: String -> [Object] -> IO (Either SomeError [Object])
-runInterpreter s v = fmap result <$> debugInterpreter s v
+runInterpreter s v = fmap snd <$> fullInterpreter s M.empty v
 
-debugInterpreter :: String -> [Object] -> IO (Either SomeError FullEnv)
-debugInterpreter input inital = case parseN input of
+fullInterpreter :: String -> M.Map String Object -> [Object] -> IO (Either SomeError (M.Map String Object, [Object]))
+fullInterpreter input initialE initalS = case parseN input of
     Left err -> return . Left $ ParseError err
     Right ast -> do 
-        v <- runExceptT $ runReaderT (deInterp (mapM_ interpret ast) inital ast) input
+        v <- runExceptT $ runReaderT (deInterp (mapM_ interpret ast) initialE initalS ast) input
         case v of
             Left err -> return . Left $ RuntimeError err
-            Right val -> return . Right $ val
+            Right val -> return . Right $ (contents val, result val)
 
 interpret :: AST -> InterpAct ()
 interpret (Symbol c) = do
