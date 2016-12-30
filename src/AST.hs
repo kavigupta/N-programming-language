@@ -8,6 +8,7 @@ data AST =
     | Duplicate
     | Execute
     | Self
+    | ImmediateSelf
     | Quine
     | Code [AST]
     | LString String

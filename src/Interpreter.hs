@@ -36,7 +36,14 @@ interpret Definition = do
     top =:= next
 interpret Self = do
     x <- ask
-    push x
+    push (head x)
+interpret ImmediateSelf = do
+    nesting <- pop
+    values <- ask
+    case nesting of
+        Number n
+            | n >= 0 && n < toInteger (length values) -> push (values !! fromInteger n) >> interpret Execute
+        o -> throwError . IndexingWithNonNumberError $ o
 interpret Index = do
     index <- pop
     case index of
@@ -59,7 +66,7 @@ interpret Quine = do
 interpret Execute = do
     code <- pop
     case code of
-        Environment.Code c e' -> local (const code) . saveAndRestoreEnvironment $ do
+        Environment.Code c e' -> local (code:) . saveAndRestoreEnvironment $ do
             setEnv e'
             mapM_ interpret c
         Environment.PrimitiveFunction _ v -> v
