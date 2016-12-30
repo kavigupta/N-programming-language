@@ -17,7 +17,8 @@ builtins = fromList [
         ("=", equality),
         ("l", list),
         ("r", range),
-        ("s", string)
+        ("s", string),
+        ("p", typedPrint)
     ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct Object
@@ -94,7 +95,6 @@ listify (Str s) = return $ map cTn s
     cTn = Number . toInteger . ord
 listify x = throwError . BuiltinTypeError $ "Unable to listify " ++ show x
 
-
 string :: InterpAct ()
 string = do
         x <- pop
@@ -106,6 +106,12 @@ string = do
     toCharacter (Number e') = return $ chr . fromInteger $ e'
     toCharacter e = throwError . BuiltinTypeError $ "Non-codepoint in toString " ++ show e
 
+typedPrint :: InterpAct ()
+typedPrint = do
+    x <- pop
+    case x of
+        Str s -> liftIO $ putStrLn s
+        u -> liftIO $ print u
 
 dedotify :: Object -> Object -> [Object]
 dedotify car Nil = [car]
