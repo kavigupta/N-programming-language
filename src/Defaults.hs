@@ -18,7 +18,9 @@ builtins = fromList [
         ("l", list),
         ("r", range),
         ("s", string),
-        ("p", typedPrint)
+        ("·", getEnv >>= push . Code []),
+        ("p", typedPrint),
+        ("i", input)
     ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct Object
@@ -112,6 +114,15 @@ typedPrint = do
     case x of
         Str s -> liftIO $ putStrLn s
         u -> liftIO $ print u
+
+input :: InterpAct ()
+input = do
+    mode <- pop
+    line <- liftIO getLine
+    case mode of
+        Number 0 -> push . Str $ line
+        Number 1 -> push . Number . read $ line
+        _ -> throwError . BuiltinTypeError $ "Invalid read mode " ++ show mode
 
 dedotify :: Object -> Object -> [Object]
 dedotify car Nil = [car]
