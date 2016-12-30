@@ -19,7 +19,7 @@ debugInterpreter :: String -> [Object] -> IO (Either SomeError FullEnv)
 debugInterpreter input inital = case parseN input of
     Left err -> return . Left $ ParseError err
     Right ast -> do 
-        v <- runExceptT $ runReaderT (deInterp (mapM_ interpret ast) inital) input
+        v <- runExceptT $ runReaderT (deInterp (mapM_ interpret ast) inital ast) input
         case v of
             Left err -> return . Left $ RuntimeError err
             Right val -> return . Right $ val
