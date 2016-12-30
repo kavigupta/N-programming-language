@@ -70,8 +70,21 @@ interpret Execute = do
             setEnv e'
             mapM_ interpret c
         Environment.PrimitiveFunction _ v -> v
-            
         o -> throwError $ ExecutedNonCodeError o
+interpret Conditional = do
+        condition <- pop
+        consequent <- pop
+        alternative <- pop
+        push $ if truthy condition then consequent else alternative
+    where
+    truthy :: Object -> Bool
+    truthy (Number x) = x /= 0
+    truthy (Str s) = s /= ""
+    truthy (Environment.Code c _) = c /= []
+    truthy Nil = False
+    truthy (Pair _ _) = True
+    truthy (PrimitiveFunction _ _) = True
+
 interpret (AST.Code c) = do
     e <- getEnv
     push (Environment.Code c e)

@@ -28,6 +28,7 @@ atom = do
         '¦' -> return Parents
         '$' -> return Execute
         'q' -> return Quine
+        '?' -> return Conditional
         x   -> return $ Symbol x
 
 lString, code, braced, lNumber :: Parser AST

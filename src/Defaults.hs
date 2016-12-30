@@ -15,7 +15,6 @@ builtins = fromList [
         ("-", sub),
         ("*", numberOperator (*)),
         ("/", numberOperator div),
-        ("?", ifthenelse),
         ("=", equality),
         ("l", list),
         ("r", range),
@@ -29,9 +28,9 @@ builtins = fromList [
     ]
 library :: Map String String
 library = fromList [
-        ("!", "{N@(N1N-$1¦*$)(1)0N=$?$$}$"),
+        ("!", "{N@(N1N-$1¦*$)(1)0N=$?$}$"),
         ("e", "0r$"),
-        ("∑", "0{N@(.$N+$1¦)(`N)2&n$?$$}$")
+        ("∑", "0{N@(.$N+$1¦)(`N)2&n$?$}$")
     ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct Object
@@ -44,21 +43,6 @@ indexBuiltinFunction implicitLiteral name = case lookup name builtins of
                 e <- getEnv
                 return $ Code ast e
         Nothing -> if implicitLiteral then return $ Str name else throwError $ UnboundVariable name
-
-truthy :: Object -> Bool
-truthy (Number x) = x /= 0
-truthy (Str s) = s /= ""
-truthy (Code c _) = c /= []
-truthy Nil = False
-truthy (Pair _ _) = True
-truthy (PrimitiveFunction _ _) = True
-
-ifthenelse :: InterpAct ()
-ifthenelse = do
-    condition <- pop
-    consequent <- pop
-    alternative <- pop
-    push $ if truthy condition then consequent else alternative
 
 equality :: InterpAct ()
 equality = do

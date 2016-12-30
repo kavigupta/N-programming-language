@@ -10,6 +10,7 @@ data AST =
     | Self
     | Parents
     | Quine
+    | Conditional
     | Code [AST]
     | LString String
     | LNumber Integer
