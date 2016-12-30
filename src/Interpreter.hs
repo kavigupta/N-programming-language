@@ -37,7 +37,7 @@ interpret Definition = do
 interpret Self = do
     x <- ask
     push (head x)
-interpret ImmediateSelf = do
+interpret Parents = do
     nesting <- pop
     values <- ask
     case nesting of

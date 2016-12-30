@@ -25,7 +25,7 @@ atom = do
         '~' -> return Lookup
         ';' -> return Duplicate
         '|' -> return Self
-        '¦' -> return ImmediateSelf
+        '¦' -> return Parents
         '$' -> return Execute
         'q' -> return Quine
         x   -> return $ Symbol x
