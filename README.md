@@ -26,7 +26,7 @@ Pushes the program's source (`q`) then converts to a list of codepoints (`l$`), 
 [Code Golf Question](http://codegolf.stackexchange.com/questions/62732/implement-a-truth-machine).
 
 ```N
-1i$(;p$·|2&1=$?$)$
+1i$(;p$`|2&1=$?$)$
 ```
 
 This reads an integer from STDIN, then runs a program that prints the top of the stack at least once but then exits if and only if its a 0.
