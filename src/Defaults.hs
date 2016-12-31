@@ -19,7 +19,7 @@ builtins = fromList [
         ("l", list),
         ("r", range),
         ("s", string),
-        ("·", getEnv >>= push . Code []),
+        ("·", return ()),
         ("p", typedPrint),
         ("i", input),
         (",", cons),
