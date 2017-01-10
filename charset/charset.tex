@@ -1,0 +1,155 @@
+\documentclass{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{array}
+\usepackage{tablefootnote}
+\usepackage{longtable}
+\usepackage[hidelinks]{hyperref}
+\usepackage{textcomp}
+
+\author{Kavi Gupta}
+\date{December 30, 2016}
+\title{Charset Specification for the \texttt{N} Programming Language}
+
+\newcommand\escape\textbackslash
+\newcommand{\at}{\makeatletter @\makeatother}
+
+\begin{document}
+\maketitle
+
+\section{Representations}
+
+\texttt N can be represented in three different ways.
+
+\begin{itemize}
+    \item Unicode: each command character is represented as a single code point, which can take
+        anywhere from one to four bytes.
+    \item Ascii: each command character is represented either as a single ascii codepoint or the
+        character \texttt{\escape} followed by an ascii codepoint
+    \item Huffman: each command character is represented by a sequence of bits of variable length.
+\end{itemize}
+
+\section{Command Character Types}
+
+\begin{itemize}
+    \item Parentheses: There are two types of parentheses, which must be matched \texttt{()}
+        and \texttt{\{\}} are the two valid kinds of parentheses.
+    \item \texttt{"}: begins a Haskell Style Strings
+    \item \texttt{\#}: Followed by a sequence of digits, which is treated as a single command.
+    \item Action: Characters that perform an action directly
+    \item Symbols: Push the associated value of the symbol onto the stack or a string with the
+        symbol in it if there is no value associated with it
+\end{itemize}
+
+\section{Commands}
+
+\subsection{Symbols}
+
+\begin{tabular}{| >{\ttfamily}l| >{\ttfamily}l| >{\ttfamily}l|l|l| >{\ttfamily}l|}
+    \hline
+    \textbf{Unicode} & \textbf{Ascii} & \textbf{Huffman Group} & \textbf{Type} & \textbf{Action} & \textbf{Library Implementation}\\
+    \hline
+    \$ & \$ & B & Action & Pop and Execute & \\
+    \& & \& & C & Action & Address the stack & \\
+    ! & ! & A33 & Symbol & Factorial & {N@(N1N-\$1¦*\$)(1)0N=\$?\$}\$\\
+    " & " & A34 & Special & N/A & \\
+    \# & \# & A35 & Special & N/A & \\
+    \% & \% & A37 & Symbol & Modulus & \\
+    $\cdot$ & \escape{*} & a38 & Symbol & No operation & \\
+    ' & ' & A39 & Symbol & Unmapped &\\
+    ( & ( & A40 & Special & N/A & \\
+    ) & ) & A41 & Special & N/A & \\
+    \texttt{*} & * & A42 & Symbol & Multiply & \\
+    + & + & A43 & Symbol & Add & \\
+    , & , & A44 & Symbol & Construct Pair & \\
+    - & - & A45 & Symbol & Subtract/Setminus & \\
+    . & . & A46 & Symbol & Destruct Pair & \\
+    / & / & A47 & Symbol & Divide & \\
+    : & : & A58 & Symbol & Unmapped & \\
+    ; & ; & A59 & Action & Pop and Push Twice & \\
+    < & < & A60 & Symbol & Less than & \\
+    = & = & A61 & Symbol & Equals & \\
+    > & > & A62 & Symbol & Greater than & \\
+    ? & ? & A63 & Action & Conditional Select & \\
+    \at & \at & A64 & Action & Bind top to second & \\
+    $[$ & $[$ & A91 & Symbol & Index & \\
+    $]$ & $]$ & A93 & Symbol & Set To Value & \\
+    \^{} & \^{} & A94 & Symbol & Exponentiate & \\
+    \_ & \_ & A95 & Symbol & Compose & \\
+    \`{} & \`{} & A96 & Symbol & Pop & \\
+    \{ & \{ & A123 & Special & N/A & \\
+    | & | & A124 & Symbol & Push Current Block &\\
+    \} & \} & A125 & Special & N/A & \\
+    \textasciitilde & \textasciitilde & A126 & Action & Lookup Name\\
+    \textbrokenbar{} & \escape{|} & a127 & Action & Pop number and get level &\\ 
+    \hline
+\end{tabular}
+
+\subsection{Alphanumerics}
+
+\begin{tabular}{| >{\ttfamily}l| >{\ttfamily}l| >{\ttfamily}l|l|l| >{\ttfamily}l|}
+    \hline
+    \textbf{Unicode} & \textbf{Ascii} & \textbf{Huffman Group}& \textbf{Type} & \textbf{Action} & \textbf{Library Implementation}\\
+    \hline
+    <\#> & <\#> & A48-A57 & Symbol & Push \# & \\
+    <A..Z> & <A..Z> & A65-A90 & Symbol & Unmapped & \\
+    <a..b> & <a..b> & A97-A98 & Symbol & Unmapped & \\
+    c & c & A99 & Symbol & List of Characters to String & \\
+    d & d & A100 & Symbol & Unmapped & \\
+    e & e & A103 & Symbol & Enumerate & 0r\$\\
+    <f..h> & <f..h> & A102-A104 & Symbol & Unmapped & \\
+    i & i & A105 & Symbol & Input & \\
+    <j..k> & <j..k> & A106-A107 & Symbol & Unmapped & \\
+    l & l & A108 & Symbol & Create a List & \\
+    m & m & A109 & Symbol & Unmapped & \\
+    n & n & A110 & Symbol & Nullity check & \\
+    o & o & A111 & Symbol & Unmapped & \\
+    p & p & A112 & Symbol & Print & \\
+    q & q & A113 & Action & Push Code onto String & \\
+    r & r & A114 & Symbol & range & \\
+    <s..z> & <s..z> & A115-A122 & Symbol & Unmapped & \\
+    \hline
+\end{tabular}
+
+Note: \texttt{<\#>} refers to any digit, and \texttt{<f..h>} refers to the range of characters from
+    \texttt f to \texttt h.
+
+\subsection{Greek Alphabet}
+
+\begin{tabular}{| >{\ttfamily}l| >{\ttfamily}l| >{\ttfamily}l|l|l| >{\ttfamily}l|}
+    \hline
+    \textbf{Unicode} & \textbf{Ascii} & \textbf{Huffman Group} & \textbf{Type} & \textbf{Action} & \textbf{Library Implementation}\\
+    \hline
+    $\alpha$ & \escape a & a1 & Symbol & Unmapped&\\
+    $\beta$ & \escape b & a2 & Symbol & Unmapped&\\
+    $\gamma$ & \escape g & a3 & Symbol & Unmapped&\\
+    $\delta$ & \escape d & a4 & Symbol & Unmapped&\\
+    $\epsilon$ & \escape e & a5 & Symbol & Unmapped&\\
+    $\zeta$ & \escape z & a6 & Symbol & Unmapped&\\
+    $\eta$ & \escape h & a7 & Symbol & Unmapped&\\
+    $\theta$ & \escape c & a8 & Symbol & Unmapped&\\
+    $\kappa$ & \escape k & a9 & Symbol & Unmapped&\\
+    $\lambda$ & \escape l & a10 & Symbol & Unmapped&\\
+    $\mu$ & \escape m & a11 & Symbol & Unmapped&\\
+    $\nu$ & \escape n & a12 & Symbol & Unmapped&\\
+    $\xi$ & \escape x & a13 & Symbol & Unmapped&\\
+    $\pi$ & \escape p & a14 & Symbol & Unmapped&\\
+    $\sigma$ & \escape s & a15 & Symbol & Unmapped&\\
+    $\tau$ & \escape t & a16 & Symbol & Unmapped&\\
+    $\phi$ & \escape f & a17 & Symbol & Unmapped&\\
+    $\chi$ & \escape j & a18 & Symbol & Unmapped&\\
+    $\psi$ & \escape q & a19 & Symbol & Unmapped&\\
+    $\omega$ & \escape w & a20 & Symbol & Unmapped&\\
+    $\Gamma$ & \escape G & a21 & Symbol & Unmapped&\\
+    $\Theta$ & \escape C & a22 & Symbol & Unmapped&\\
+    $\Lambda$ & \escape L & a23 & Symbol & Unmapped&\\
+    $\Xi$ & \escape X & a24 & Symbol & Unmapped&\\
+    $\Pi$ & \escape P & a25 & Symbol & Unmapped&\\
+    $\Sigma$ & \escape S & a26 & Symbol & Sum List& 0\{N@(.\$N+\$1\textbrokenbar)(\`{}N)2\&n\$?\$\}\$\\
+    $\Phi$ & \escape F & a27 & Symbol & Unmapped&\\
+    $\Psi$ & \escape Q & a28 & Symbol & Unmapped&\\
+    $\Omega$ & \escape W & a29 & Symbol & Unmapped&\\
+    \hline
+\end{tabular}
+
+\end{document}
