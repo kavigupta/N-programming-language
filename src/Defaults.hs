@@ -18,7 +18,7 @@ builtins = fromList [
         ("=", equality),
         ("l", list),
         ("r", range),
-        ("s", string),
+        ("c", string),
         ("·", return ()),
         ("p", typedPrint),
         ("i", input),

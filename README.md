@@ -16,10 +16,10 @@ This function (from the standard library) first stores its argument. It then pus
 [Code Golf Question](http://codegolf.stackexchange.com/questions/12368/print-every-character-your-program-doesnt-have/12373).
 
 ```N
-ql$#126#32r$-$s$
+ql$#126#32r$-$c$
 ```
 
-Pushes the program's source (`q`) then converts to a list of codepoints (`l$`), then pushes the printable ASCII set (`#126#32r$`), then subtracts the two as sets (`-$`), and converts back to a string (`s$`).
+Pushes the program's source (`q`) then converts to a list of codepoints (`l$`), then pushes the printable ASCII set (`#126#32r$`), then subtracts the two as sets (`-$`), and converts back to a string (`c$`).
 
 ## Truth Machine
 
