@@ -15,6 +15,7 @@ builtins = fromList [
         ("-", sub),
         ("*", numberOperator (*)),
         ("/", numberOperator div),
+        ("%", numberOperator mod),
         ("=", equality),
         ("l", list),
         ("r", range),

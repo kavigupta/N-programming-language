@@ -7,11 +7,13 @@ import Data.List
 
 import Test.QuickCheck
 import Test.QuickCheck.Monadic
+
+import System.Process
     
 test :: IO ()
 test = do
     quickCheck factorial
-    quickCheck nonContents
+    doctests
     return ()
 
 factorial :: Property
@@ -23,11 +25,25 @@ factorial = monadicIO $ do
                 (Right [Number f]) -> f == product [1..n]
                 _ -> False
 
-nonContents :: Property
-nonContents = monadicIO $ do
-    res <- run $ runInterpreter code []
-    assert $ case res of
-        (Right [Str s]) -> (sort . nub $ s ++ code) == ['\x20'..'\x7e']
-        _ -> False
-    where
-    code = "ql$#126#32r$-$s$"
+doctests :: IO ()
+doctests = do
+    system "make program"
+    strDocs <- readFile "tests/doctest.n"
+    let docs = lines strDocs
+    doctest docs
+    putStrLn "Passed Doctests!"
+
+doctest :: [String] -> IO ()
+doctest [] = return ()
+doctest (('>':'>':'>':' ':command):rest) = do
+    value <- readProcess "./N" ["-e", command] ""
+    let expected = takeWhile (not . isPrefixOf ">>>") rest
+    let actual = lines value
+    if actual /= expected then
+        error $
+            "Invalid command " ++ command
+                ++ "\nexpected: " ++ show expected
+                ++ "\nbut was:  " ++ show actual
+    else
+        doctest $ dropWhile (not . isPrefixOf ">>>") rest
+doctest _ = error "Invalid doctest.n format"
