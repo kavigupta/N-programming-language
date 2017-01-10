@@ -25,8 +25,7 @@ builtins = fromList [
         ("p", typedPrint),
         ("i", input),
         (",", cons),
-        (".", deCons),
-        ("n", nullN)
+        (".", deCons)
     ]
 library :: Map String String
 library = fromList [
@@ -36,6 +35,7 @@ library = fromList [
     ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct Object
+indexBuiltinFunction _ "n" = return Nil
 indexBuiltinFunction implicitLiteral name = case lookup name builtins of
     Just x -> return . PrimitiveFunction name $ x
     Nothing -> case lookup name library of
@@ -139,13 +139,6 @@ deCons = do
     case lis of
         Pair car cdr -> push cdr >> push car
         o -> throwError . BuiltinTypeError $ "Tried to unpack " ++ show o
-
-nullN :: InterpAct ()
-nullN = do
-    lis <- pop
-    push . Number $ case lis of
-        Nil -> 1
-        _ -> 0
 
 dedotify :: Object -> Object -> [Object]
 dedotify car Nil = [car]
