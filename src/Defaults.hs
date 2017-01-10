@@ -16,6 +16,7 @@ builtins = fromList [
         ("*", numberOperator (*)),
         ("/", numberOperator div),
         ("%", numberOperator mod),
+        ("<", numberOperator (\x y -> if x < y then 1 else 0)),
         ("=", equality),
         ("l", list),
         ("r", range),
