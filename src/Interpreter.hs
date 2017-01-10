@@ -72,9 +72,9 @@ interpret Execute = do
         Environment.PrimitiveFunction _ v -> v
         o -> throwError $ ExecutedNonCodeError o
 interpret Conditional = do
-        condition <- pop
-        consequent <- pop
         alternative <- pop
+        consequent <- pop
+        condition <- pop
         push $ if truthy condition then consequent else alternative
     where
     truthy :: Object -> Bool
