@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, UndecidableInstances, IncoherentInstances #-}
 module Defaults(indexBuiltinFunction) where
 
 import Prelude hiding (lookup)
@@ -180,35 +180,44 @@ instance ToObject String where
     toObject = Str
 
 instance (ToObject a, ToObject b) => ToObject (a, b) where
-    toObject (a, b) = Pair (toObject a) (toObject b)
+    toObject (b, a) = Pair (toObject a) (toObject b)
 
 instance (ToObject a) => ToObject [a] where
     toObject = foldr (Pair . toObject) Nil
 
+class FromObject a where
+    fromObject :: Object -> Maybe a
+
 class FromStack a where
     fromStack :: InterpAct (Maybe a)
 
-instance (FromStack Object) where
-    fromStack = Just <$> pop
-
-instance (FromStack Integer) where
+instance {-# OVERLAPPABLE #-} (FromObject a) => FromStack a where
     fromStack = do
         x <- pop
-        case x of
-            Number x' -> return $ Just x'
-            _ -> return Nothing
+        case fromObject x of
+            Just y -> return (Just y)
+            Nothing -> push x >> return Nothing
+
+instance (FromObject Object) where
+    fromObject = Just
+
+instance (FromObject Integer) where
+    fromObject (Number x') = Just x'
+    fromObject _ = Nothing
+
+instance (FromObject String) where
+    fromObject (Str x') = Just x'
+    fromObject _ = Nothing
+
 instance (FromStack a, FromStack b) => (FromStack (TwoStack a b)) where
     fromStack = do
         x <- fromStack
         y <- fromStack
-        return $ liftM2 TwoStack x y
+        return $ liftM2 TwoStack y x
 
-instance (FromStack String) where
-    fromStack = do
-        x <- pop
-        case x of
-            Str x' -> return $ Just x'
-            _ -> return Nothing
+instance (FromObject a, FromObject b) => (FromObject (a, b)) where
+    fromObject (Pair b a) = liftM2 (,) (fromObject a) (fromObject b)
+    fromObject _ = Nothing
 
 (<|>) :: (FromStack a, ToStack b) => (a -> b) -> InterpAct () -> InterpAct ()
 f <|> other = do
