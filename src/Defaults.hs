@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, UndecidableInstances #-}
 module Defaults(indexBuiltinFunction) where
 
 import Prelude hiding (lookup)
@@ -62,8 +63,8 @@ list = do
                 | x < 0 -> err
                 | otherwise -> do
                     items <- replicateM (fromInteger x) pop
-                    push $ toObject items
-            x -> toObject <$> listify x >>= push
+                    toStack items
+            x -> listify x >>= toStack
     where
     err = throwError . BuiltinTypeError $ "#l cannot be called on a negative"
 
@@ -72,7 +73,7 @@ range = do
     lo <- pop
     hi <- pop
     case (lo, hi) of
-        (Number l, Number h) -> push $ toObject [l..h]
+        (Number l, Number h) -> toStack [l..h]
         _ -> throwError . BuiltinTypeError $ "#r requires two numbers to produce a range"
 
 sub :: InterpAct ()
@@ -85,7 +86,7 @@ sub = do
             x <- listify x'
             y <- listify y'
             filterd <- filterM (notIn y) x
-            push . toObject $ filterd
+            toStack filterd
     where
     notIn :: [Object] -> Object -> InterpAct Bool
     notIn [] _ = return True
@@ -155,14 +156,63 @@ numberOperator (#) = do
         _ -> throwError . BuiltinTypeError $
                 "Builtin requires two Integers but received " ++ show x ++ " and " ++ show y
 
-instance Objectifiable Integer where
-    toObject = Number
-
-class Objectifiable a where
+class ToObject a where
     toObject :: a -> Object
 
-instance Objectifiable Object where
+instance (ToObject a) => ToStack a where
+    toStack = push . toObject
+
+class ToStack a where
+    toStack :: a -> InterpAct ()
+
+data TwoStack a b = TwoStack a b
+
+instance (ToStack a, ToStack b) => ToStack (TwoStack a b) where
+    toStack (TwoStack x y) = toStack x >> toStack y
+
+instance ToObject Integer where
+    toObject = Number
+
+instance ToObject Object where
     toObject = id
 
-instance (Objectifiable a) => Objectifiable [a] where
+instance ToObject String where
+    toObject = Str
+
+instance (ToObject a, ToObject b) => ToObject (a, b) where
+    toObject (a, b) = Pair (toObject a) (toObject b)
+
+instance (ToObject a) => ToObject [a] where
     toObject = foldr (Pair . toObject) Nil
+
+class FromStack a where
+    fromStack :: InterpAct (Maybe a)
+
+instance (FromStack Object) where
+    fromStack = Just <$> pop
+
+instance (FromStack Integer) where
+    fromStack = do
+        x <- pop
+        case x of
+            Number x' -> return $ Just x'
+            _ -> return Nothing
+instance (FromStack a, FromStack b) => (FromStack (TwoStack a b)) where
+    fromStack = do
+        x <- fromStack
+        y <- fromStack
+        return $ liftM2 TwoStack x y
+
+instance (FromStack String) where
+    fromStack = do
+        x <- pop
+        case x of
+            Str x' -> return $ Just x'
+            _ -> return Nothing
+
+(<|>) :: (FromStack a, ToStack b) => (a -> b) -> InterpAct () -> InterpAct ()
+f <|> other = do
+    first <- fromStack
+    case first of
+        Just v -> toStack $ f v
+        Nothing -> other
