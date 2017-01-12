@@ -20,7 +20,7 @@ builtins = fromList [
         ("<", numberOperator (\x y -> if x < y then 1 else 0)),
         (">", numberOperator (\x y -> if x > y then 1 else 0)),
         ("=", equality <|> error "Unreachable (=)"),
-        -- ("[", index),
+        ("[", indexL <|> indexS <|> throwError (BuiltinTypeError "Invalid Attempt to index")),
         ("l", list),
         ("r", range <|> throwError (BuiltinTypeError "#r requires two numbers to produce a range")),
         ("c", string),
@@ -30,6 +30,7 @@ builtins = fromList [
         (",", cons <|> error "Unreachable (,)"),
         (".", deCons <|> (pop >>= \o -> throwError . BuiltinTypeError $ "Tried to unpack " ++ show o))
     ]
+
 library :: Map String String
 library = fromList [
         ("!", "{N@0N=$(1)(N1N-$1¦*$)?$}$"),
@@ -81,6 +82,11 @@ diff (TwoStack x y) = filter (`notIn` x) y
     notIn :: Object -> [Object] -> Bool
     notIn = (not .) . any . objEqual
 
+indexS :: TwoStack String Integer -> String
+indexS (TwoStack s i) = [s !! fromInteger i]
+
+indexL :: TwoStack [Object] Integer -> Object
+indexL (TwoStack l i) = l !! fromInteger i
 
 string :: InterpAct ()
 string = do
