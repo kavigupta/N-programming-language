@@ -77,16 +77,16 @@ sub = stackCurry ((-) :: Integer -> Integer -> Integer) <|> diff <|> err
     err = pop >>= \x -> throwError . BuiltinTypeError $ "Unable to listify " ++ show x
 
 diff :: TwoStack [Object] [Object] -> [Object]
-diff (TwoStack x y) = filter (`notIn` x) y
+diff (TwoStack x y) = filter (`notIn` y) x
     where
     notIn :: Object -> [Object] -> Bool
     notIn = (not .) . any . objEqual
 
-indexS :: TwoStack String Integer -> String
-indexS (TwoStack s i) = [s !! fromInteger i]
+indexS :: TwoStack Integer String -> String
+indexS (TwoStack i s) = [s !! fromInteger i]
 
-indexL :: TwoStack [Object] Integer -> Object
-indexL (TwoStack l i) = l !! fromInteger i
+indexL :: TwoStack Integer [Object] -> Object
+indexL (TwoStack i l) = l !! fromInteger i
 
 string :: InterpAct ()
 string = do
@@ -125,8 +125,8 @@ dedotify car Nil = [car]
 dedotify car (Pair cadr cddr) = car : dedotify cadr cddr
 dedotify car cdr = [car, cdr]
 
-stackCurry :: (a -> b -> c) -> TwoStack b a -> c
-stackCurry f (TwoStack x y) = f y x
+stackCurry :: (a -> b -> c) -> TwoStack a b -> c
+stackCurry f (TwoStack x y) = f x y
 
 numberOperator :: (Integer -> Integer -> Integer) -> InterpAct ()
 numberOperator (#) = stackCurry (#) <|> err
@@ -165,7 +165,7 @@ instance ToObject String where
     toObject = Str
 
 instance (ToObject a, ToObject b) => ToObject (a, b) where
-    toObject (b, a) = Pair (toObject a) (toObject b)
+    toObject (a, b) = Pair (toObject a) (toObject b)
 
 instance (ToObject a) => ToObject [a] where
     toObject = foldr (Pair . toObject) Nil
@@ -206,7 +206,7 @@ instance (FromStack a, FromStack b) => (FromStack (TwoStack a b)) where
     fromStack = do
         x <- fromStack
         y <- fromStack
-        return $ liftM2 TwoStack y x
+        return $ liftM2 TwoStack x y
 
 instance (FromObject a, FromObject b) => (FromObject (a, b)) where
     fromObject (Pair b a) = liftM2 (,) (fromObject a) (fromObject b)
