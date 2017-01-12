@@ -25,9 +25,9 @@ builtins = fromList [
         ("r", range),
         ("c", string),
         ("·", return ()),
-        ("p", typedPrint <|> error "Unreachable"),
+        ("p", typedPrint <|> error "Unreachable (p)"),
         ("i", input),
-        (",", cons <|> error "Unreachable"),
+        (",", cons <|> error "Unreachable (,)"),
         (".", deCons <|> (pop >>= \o -> throwError . BuiltinTypeError $ "Tried to unpack " ++ show o))
     ]
 library :: Map String String
