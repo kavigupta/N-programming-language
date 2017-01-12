@@ -1,3 +1,4 @@
+{-# LANGUAGE DoAndIfThenElse #-}
 module Environment (
     Object(..),
     FullEnv,
@@ -94,7 +95,7 @@ type InterpAct x = ReaderT [Object] (StateT FullEnv (ReaderT String (ExceptT Int
 
 deInterp :: InterpAct () -> Map String Object -> [Object] -> [AST] -> ReaderT String (ExceptT InterpreterError IO) FullEnv
 deInterp x items initial ast = snd <$> runStateT (runReaderT x [Code ast newFrame]) (FullEnv (Environment items) $ Stack initial)
--- 
+--
 -- interp :: Action -> InterpAct ()
 -- interp act = do
 --     es <- get
@@ -138,7 +139,7 @@ lookupIn indexBuiltinFunction implicitLiteral f s = case s `lookup` mappings f o
 (=:=) :: Object -> Object -> InterpAct ()
 (Str var) =:= val   = do
     (FullEnv (Environment f) s) <- get
-    
+
     if var `member` f then
         throwError $ MultipleAssignmentError var
     else
