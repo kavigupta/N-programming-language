@@ -22,7 +22,7 @@ builtins = fromList [
         ("=", equality <|> error "Unreachable (=)"),
         -- ("[", index),
         ("l", list),
-        ("r", range),
+        ("r", range <|> throwError (BuiltinTypeError "#r requires two numbers to produce a range")),
         ("c", string),
         ("·", return ()),
         ("p", typedPrint <|> error "Unreachable (p)"),
@@ -69,13 +69,8 @@ list = do
     where
     err = throwError . BuiltinTypeError $ "#l cannot be called on a negative"
 
-range :: InterpAct ()
-range = do
-    lo <- pop
-    hi <- pop
-    case (lo, hi) of
-        (Number l, Number h) -> toStack [l..h]
-        _ -> throwError . BuiltinTypeError $ "#r requires two numbers to produce a range"
+range :: TwoStack Integer Integer -> [Integer]
+range (TwoStack l h) = [l..h]
 
 sub :: InterpAct ()
 sub = stackCurry ((-) :: Integer -> Integer -> Integer) <|> listDiff
