@@ -2,30 +2,14 @@
 
 module Main(main) where
 
-import Interpreter
-import Environment
-
 import Data.List
-
-import Test.QuickCheck
-import Test.QuickCheck.Monadic
 
 import System.Process
 
 main :: IO ()
 main = do
-    quickCheck factorial
     doctests
     return ()
-
-factorial :: Property
-factorial = monadicIO $ do
-    n <- pick arbitrary
-    pre $ n >= 0
-    x <- run $ runInterpreter "!$" [Number n]
-    assert $ case x of
-                (Right [Number f]) -> f == product [1..n]
-                _ -> False
 
 doctests :: IO ()
 doctests = do
