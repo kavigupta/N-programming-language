@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances, UndecidableInstances, IncoherentInstances #-}
-module StackManip(ToStack(..), TwoStack(..), NoStack(..), (<|>)) where
+module StackManip(ToStack(..), TwoStack(..), (<|>)) where
 
 import Control.Monad.Except
 import Data.Char
@@ -13,8 +13,6 @@ class ToStack a where
     toStack :: a -> InterpAct ()
 
 data TwoStack a b = TwoStack a b
-
-data NoStack = NoStack
 
 class FromObject a where
     fromObject :: Object -> Maybe a
@@ -36,8 +34,8 @@ instance (ToObject a) => ToStack a where
 instance (ToStack a, ToStack b) => ToStack (TwoStack a b) where
     toStack (TwoStack x y) = toStack x >> toStack y
 
-instance ToStack NoStack where
-    toStack NoStack = return ()
+instance ToStack () where
+    toStack = return
 
 instance (ToStack a) => ToStack (IO a) where
     toStack v = liftIO v >>= toStack

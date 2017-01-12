@@ -88,9 +88,9 @@ indexS = (return .) . stackCurry . flip $ (!!)
 indexL :: TwoStack Int [Object] -> Object
 indexL = stackCurry . flip $ (!!)
 
-typedPrint :: Object -> IO NoStack
-typedPrint (Str s) = putStrLn s >> return NoStack
-typedPrint u = print u >> return NoStack
+typedPrint :: Object -> IO ()
+typedPrint (Str s) = putStrLn s
+typedPrint u = print u
 
 input :: InterpAct ()
 input = do
