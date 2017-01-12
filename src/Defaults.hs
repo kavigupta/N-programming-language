@@ -82,11 +82,11 @@ diff (TwoStack x y) = filter (`notIn` y) x
     notIn :: Object -> [Object] -> Bool
     notIn = (not .) . any . objEqual
 
-indexS :: TwoStack Integer String -> String
-indexS (TwoStack i s) = [s !! fromInteger i]
+indexS :: TwoStack Int String -> String
+indexS = (return .) . stackCurry . flip $ (!!)
 
-indexL :: TwoStack Integer [Object] -> Object
-indexL (TwoStack i l) = l !! fromInteger i
+indexL :: TwoStack Int [Object] -> Object
+indexL = stackCurry . flip $ (!!)
 
 typedPrint :: Object -> IO NoStack
 typedPrint (Str s) = putStrLn s >> return NoStack
