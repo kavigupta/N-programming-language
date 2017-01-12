@@ -20,13 +20,14 @@ builtins = fromList [
         ("<", numberOperator (\x y -> if x < y then 1 else 0)),
         (">", numberOperator (\x y -> if x > y then 1 else 0)),
         ("=", equality),
+        -- ("[", index),
         ("l", list),
         ("r", range),
         ("c", string),
         ("·", return ()),
         ("p", typedPrint),
         ("i", input),
-        (",", cons),
+        (",", cons <|> error "Unreachable"),
         (".", deCons)
     ]
 library :: Map String String
@@ -64,7 +65,9 @@ list = do
                 | otherwise -> do
                     items <- replicateM (fromInteger x) pop
                     toStack items
-            x -> listify x >>= toStack
+            x -> case fromObject x :: Maybe [Object] of
+                Just x' -> toStack x'
+                Nothing -> throwError . BuiltinTypeError $ "Unable to listify " ++ show x
     where
     err = throwError . BuiltinTypeError $ "#l cannot be called on a negative"
 
@@ -82,32 +85,29 @@ sub = do
     y' <- pop
     case (x', y') of
         (Number x, Number y) -> push . Number $ x - y
-        _ -> do
-            x <- listify x'
-            y <- listify y'
-            filterd <- filterM (notIn y) x
-            toStack filterd
+        _ -> case differ x' y' of
+                Just (x, y) -> filterM (notIn y) x >>= toStack
+                Nothing -> pop >>= \x -> throwError . BuiltinTypeError $ "Unable to listify " ++ show x
     where
+    differ x' y' = do
+        x <- fromObject x'
+        y <- fromObject y'
+        return (x, y)
     notIn :: [Object] -> Object -> InterpAct Bool
     notIn [] _ = return True
     notIn (x:xs) y = do
         v <- objEqual x y
         if v then return False else notIn xs y
 
-listify :: Object -> InterpAct [Object]
-listify Nil = return []
-listify (Pair a b) = return $ dedotify a b
-listify (Str s) = return $ map cTn s
-    where
-    cTn = Number . toInteger . ord
-listify x = throwError . BuiltinTypeError $ "Unable to listify " ++ show x
 
 string :: InterpAct ()
 string = do
         x <- pop
-        lst <- listify x
-        str <- mapM toCharacter lst
-        push . Str $ str
+        case fromObject x of
+            Just lst -> do
+                str <- mapM toCharacter lst
+                push . Str $ str
+            Nothing -> error "Unreachable"
     where
     toCharacter :: Object -> InterpAct Char
     toCharacter (Number e') = return $ chr . fromInteger $ e'
@@ -129,18 +129,15 @@ input = do
         Number 1 -> push . Number . read $ line
         _ -> throwError . BuiltinTypeError $ "Invalid read mode " ++ show mode
 
-cons :: InterpAct ()
-cons = do
-    car <- pop
-    cdr <- pop
-    push $ Pair car cdr
+cons :: TwoStack Object Object -> (Object, Object)
+cons (TwoStack x y) = (x, y)
 
 deCons :: InterpAct ()
-deCons = do
-    lis <- pop
-    case lis of
-        Pair car cdr -> push cdr >> push car
-        o -> throwError . BuiltinTypeError $ "Tried to unpack " ++ show o
+deCons = deConsF <|> err
+    where
+    deConsF :: (Object, Object) -> TwoStack Object Object
+    deConsF (x, y) = TwoStack x y
+    err = pop >>= \o -> throwError . BuiltinTypeError $ "Tried to unpack " ++ show o
 
 dedotify :: Object -> Object -> [Object]
 dedotify car Nil = [car]
@@ -207,6 +204,14 @@ instance (FromObject Integer) where
 
 instance (FromObject String) where
     fromObject (Str x') = Just x'
+    fromObject _ = Nothing
+
+instance (FromObject a) => FromObject [a] where
+    fromObject Nil = return []
+    fromObject (Pair a b) = mapM fromObject $ dedotify a b
+    fromObject (Str s) = mapM (fromObject . cTn) s
+        where
+        cTn = Number . toInteger . ord
     fromObject _ = Nothing
 
 instance (FromStack a, FromStack b) => (FromStack (TwoStack a b)) where
