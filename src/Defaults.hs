@@ -55,39 +55,31 @@ equality (TwoStack lhs rhs)
 equality _ = 0
 
 list :: InterpAct ()
-list = do
+list = (id :: [Object] -> [Object]) <|> nList
+    where
+    nList = do
         top <- pop
         case top of
             Number x
-                | x < 0 -> err
+                | x < 0 -> throwError . BuiltinTypeError $ "#l cannot be called on a negative"
                 | otherwise -> do
                     items <- replicateM (fromInteger x) pop
                     toStack items
-            x -> case fromObject x :: Maybe [Object] of
-                Just x' -> toStack x'
-                Nothing -> throwError . BuiltinTypeError $ "Unable to listify " ++ show x
-    where
-    err = throwError . BuiltinTypeError $ "#l cannot be called on a negative"
+            x -> throwError . BuiltinTypeError $ "Unable to listify " ++ show x
 
 range :: TwoStack Integer Integer -> [Integer]
 range (TwoStack l h) = [l..h]
 
 sub :: InterpAct ()
-sub = stackCurry ((-) :: Integer -> Integer -> Integer) <|> listDiff
+sub = stackCurry ((-) :: Integer -> Integer -> Integer) <|> diff <|> err
     where
-    listDiff = do
-        x' <- pop
-        y' <- pop
-        case differ x' y' of
-            Just (x, y) -> toStack $ filter (notIn y) x
-            Nothing -> pop >>= \x -> throwError . BuiltinTypeError $ "Unable to listify " ++ show x
-    differ x' y' = do
-        x <- fromObject x'
-        y <- fromObject y'
-        return (x, y)
-    notIn :: [Object] -> Object -> Bool
-    notIn [] _ = True
-    notIn (x:xs) y = not (objEqual x y) && notIn xs y
+    err = pop >>= \x -> throwError . BuiltinTypeError $ "Unable to listify " ++ show x
+
+diff :: TwoStack [Object] [Object] -> [Object]
+diff (TwoStack x y) = filter (`notIn` x) y
+    where
+    notIn :: Object -> [Object] -> Bool
+    notIn = (not .) . any . objEqual
 
 
 string :: InterpAct ()
@@ -214,6 +206,7 @@ instance (FromObject a, FromObject b) => (FromObject (a, b)) where
     fromObject (Pair b a) = liftM2 (,) (fromObject a) (fromObject b)
     fromObject _ = Nothing
 
+infixr 9 <|>
 (<|>) :: (FromStack a, ToStack b) => (a -> b) -> InterpAct () -> InterpAct ()
 f <|> other = do
     first <- fromStack
