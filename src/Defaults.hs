@@ -28,7 +28,7 @@ builtins = fromList [
         ("p", typedPrint),
         ("i", input),
         (",", cons <|> error "Unreachable"),
-        (".", deCons)
+        (".", deCons <|> (pop >>= \o -> throwError . BuiltinTypeError $ "Tried to unpack " ++ show o))
     ]
 library :: Map String String
 library = fromList [
@@ -132,25 +132,20 @@ input = do
 cons :: TwoStack Object Object -> (Object, Object)
 cons (TwoStack x y) = (x, y)
 
-deCons :: InterpAct ()
-deCons = deConsF <|> err
-    where
-    deConsF :: (Object, Object) -> TwoStack Object Object
-    deConsF (x, y) = TwoStack x y
-    err = pop >>= \o -> throwError . BuiltinTypeError $ "Tried to unpack " ++ show o
+deCons :: (Object, Object) -> TwoStack Object Object
+deCons (x, y) = TwoStack x y
 
 dedotify :: Object -> Object -> [Object]
 dedotify car Nil = [car]
 dedotify car (Pair cadr cddr) = car : dedotify cadr cddr
 dedotify car cdr = [car, cdr]
 
+stackCurry :: (a -> b -> c) -> TwoStack b a -> c
+stackCurry f (TwoStack x y) = f y x
+
 numberOperator :: (Integer -> Integer -> Integer) -> InterpAct ()
-numberOperator (#) = do
-    x <- pop
-    y <- pop
-    case (x, y) of
-        (Number x', Number y') -> push . Number $ x' # y'
-        _ -> throwError . BuiltinTypeError $
+numberOperator (#) = stackCurry (#) <|> err
+    where err = pop >>= \x -> pop >>= \y -> throwError . BuiltinTypeError $
                 "Builtin requires two Integers but received " ++ show x ++ " and " ++ show y
 
 class ToObject a where
@@ -166,6 +161,9 @@ data TwoStack a b = TwoStack a b
 
 instance (ToStack a, ToStack b) => ToStack (TwoStack a b) where
     toStack (TwoStack x y) = toStack x >> toStack y
+
+instance (ToStack a) => ToStack (IO a) where
+    toStack v = liftIO v >>= toStack
 
 instance ToObject Integer where
     toObject = Number
