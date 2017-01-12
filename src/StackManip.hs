@@ -6,13 +6,13 @@ import Data.Char
 
 import Environment
 
+data TwoStack a b = TwoStack a b
+
 class ToObject a where
     toObject :: a -> Object
 
 class ToStack a where
     toStack :: a -> InterpAct ()
-
-data TwoStack a b = TwoStack a b
 
 class FromObject a where
     fromObject :: Object -> Maybe a
