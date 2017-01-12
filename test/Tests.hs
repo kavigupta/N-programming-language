@@ -5,6 +5,7 @@ module Main(main) where
 import Data.List
 
 import System.Process
+import System.Timeout
 
 main :: IO ()
 main = do
@@ -19,10 +20,17 @@ doctests = do
     doctest docs
     putStrLn "Passed Doctests!"
 
+errorOnTimeout :: String -> Int -> IO a -> IO a
+errorOnTimeout name time act = do
+    perhaps <- timeout time act
+    case perhaps of
+        Just x -> return x
+        Nothing -> error $ "timeout in " ++ name
+
 doctest :: [String] -> IO ()
 doctest [] = return ()
 doctest (('>':'>':'>':' ':command):rest) = do
-    value <- readProcess "./N" ["-e", command] ""
+    value <- errorOnTimeout command 1000000 $ readProcess "./N" ["-e", command] ""
     let expected = takeWhile (not . isPrefixOf ">>>") rest
     let actual = lines value
     if actual /= expected then
