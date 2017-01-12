@@ -19,7 +19,7 @@ builtins = fromList [
         ("%", numberOperator mod),
         ("<", numberOperator (\x y -> if x < y then 1 else 0)),
         (">", numberOperator (\x y -> if x > y then 1 else 0)),
-        ("=", equality),
+        ("=", equality <|> error "Unreachable"),
         -- ("[", index),
         ("l", list),
         ("r", range),
@@ -49,12 +49,10 @@ indexBuiltinFunction implicitLiteral name = case lookup name builtins of
                 return $ Code ast e
         Nothing -> if implicitLiteral then return $ Str name else throwError $ UnboundVariable name
 
-equality :: InterpAct ()
-equality = do
-    lhs <- pop
-    rhs <- pop
-    areEq <- objEqual lhs rhs
-    push . Number $ if areEq then 1 else 0
+equality :: TwoStack Integer Integer -> Integer
+equality (TwoStack lhs rhs)
+    | lhs == rhs = 1
+equality _ = 0
 
 list :: InterpAct ()
 list = do
@@ -80,15 +78,14 @@ range = do
         _ -> throwError . BuiltinTypeError $ "#r requires two numbers to produce a range"
 
 sub :: InterpAct ()
-sub = do
-    x' <- pop
-    y' <- pop
-    case (x', y') of
-        (Number x, Number y) -> push . Number $ x - y
-        _ -> case differ x' y' of
-                Just (x, y) -> filterM (notIn y) x >>= toStack
-                Nothing -> pop >>= \x -> throwError . BuiltinTypeError $ "Unable to listify " ++ show x
+sub = stackCurry ((-) :: Integer -> Integer -> Integer) <|> listDiff
     where
+    listDiff = do
+        x' <- pop
+        y' <- pop
+        case differ x' y' of
+            Just (x, y) -> filterM (notIn y) x >>= toStack
+            Nothing -> pop >>= \x -> throwError . BuiltinTypeError $ "Unable to listify " ++ show x
     differ x' y' = do
         x <- fromObject x'
         y <- fromObject y'
