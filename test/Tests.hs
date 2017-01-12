@@ -1,4 +1,6 @@
-module Tests(test) where
+{-# LANGUAGE DoAndIfThenElse #-}
+
+module Main(main) where
 
 import Interpreter
 import Environment
@@ -9,9 +11,9 @@ import Test.QuickCheck
 import Test.QuickCheck.Monadic
 
 import System.Process
-    
-test :: IO ()
-test = do
+
+main :: IO ()
+main = do
     quickCheck factorial
     doctests
     return ()
