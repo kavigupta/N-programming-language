@@ -39,6 +39,10 @@
 (0 0 1)
 >>> 00=$pp=$AA=$122l$122l$=$4l$
 (1 1 1 1)
+>>> 2A@ 3B@ 4C@ BCA3l$
+(2 4 3)
+>>> FEDCBA 6l$ 2[$p$
+C
 >>> "Hello, World!"p$
 Hello, World!
 >>> ql$#126#32r$-$c$
