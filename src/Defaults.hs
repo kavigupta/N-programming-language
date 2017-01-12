@@ -19,7 +19,7 @@ builtins = fromList [
         ("%", numberOperator mod),
         ("<", numberOperator (\x y -> if x < y then 1 else 0)),
         (">", numberOperator (\x y -> if x > y then 1 else 0)),
-        ("=", equality <|> error "Unreachable"),
+        ("=", equality <|> error "Unreachable (=)"),
         -- ("[", index),
         ("l", list),
         ("r", range),
@@ -49,9 +49,9 @@ indexBuiltinFunction implicitLiteral name = case lookup name builtins of
                 return $ Code ast e
         Nothing -> if implicitLiteral then return $ Str name else throwError $ UnboundVariable name
 
-equality :: TwoStack Integer Integer -> Integer
+equality :: TwoStack Object Object -> Integer
 equality (TwoStack lhs rhs)
-    | lhs == rhs = 1
+    | objEqual lhs rhs = 1
 equality _ = 0
 
 list :: InterpAct ()
@@ -84,17 +84,15 @@ sub = stackCurry ((-) :: Integer -> Integer -> Integer) <|> listDiff
         x' <- pop
         y' <- pop
         case differ x' y' of
-            Just (x, y) -> filterM (notIn y) x >>= toStack
+            Just (x, y) -> toStack $ filter (notIn y) x
             Nothing -> pop >>= \x -> throwError . BuiltinTypeError $ "Unable to listify " ++ show x
     differ x' y' = do
         x <- fromObject x'
         y <- fromObject y'
         return (x, y)
-    notIn :: [Object] -> Object -> InterpAct Bool
-    notIn [] _ = return True
-    notIn (x:xs) y = do
-        v <- objEqual x y
-        if v then return False else notIn xs y
+    notIn :: [Object] -> Object -> Bool
+    notIn [] _ = True
+    notIn (x:xs) y = not (objEqual x y) && notIn xs y
 
 
 string :: InterpAct ()
