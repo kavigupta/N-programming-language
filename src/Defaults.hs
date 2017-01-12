@@ -25,7 +25,7 @@ builtins = fromList [
         ("r", range),
         ("c", string),
         ("·", return ()),
-        ("p", typedPrint),
+        ("p", typedPrint <|> error "Unreachable"),
         ("i", input),
         (",", cons <|> error "Unreachable"),
         (".", deCons <|> (pop >>= \o -> throwError . BuiltinTypeError $ "Tried to unpack " ++ show o))
@@ -108,12 +108,9 @@ string = do
     toCharacter (Number e') = return $ chr . fromInteger $ e'
     toCharacter e = throwError . BuiltinTypeError $ "Non-codepoint in toString " ++ show e
 
-typedPrint :: InterpAct ()
-typedPrint = do
-    x <- pop
-    case x of
-        Str s -> liftIO $ putStrLn s
-        u -> liftIO $ print u
+typedPrint :: Object -> IO NoStack
+typedPrint (Str s) = putStrLn s >> return NoStack
+typedPrint u = print u >> return NoStack
 
 input :: InterpAct ()
 input = do
@@ -154,8 +151,13 @@ class ToStack a where
 
 data TwoStack a b = TwoStack a b
 
+data NoStack = NoStack
+
 instance (ToStack a, ToStack b) => ToStack (TwoStack a b) where
     toStack (TwoStack x y) = toStack x >> toStack y
+
+instance ToStack NoStack where
+    toStack NoStack = return ()
 
 instance (ToStack a) => ToStack (IO a) where
     toStack v = liftIO v >>= toStack
