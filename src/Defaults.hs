@@ -23,7 +23,7 @@ builtins = fromList [
         ("[", indexL <|> indexS <|> throwError (BuiltinTypeError "Invalid Attempt to index")),
         ("l", list),
         ("r", range <|> throwError (BuiltinTypeError "#r requires two numbers to produce a range")),
-        ("c", string),
+        ("c", map chr <|> (pop >>= \e -> throwError . BuiltinTypeError $ "Non-codepoint in toString " ++ show e)),
         ("·", return ()),
         ("p", typedPrint <|> error "Unreachable (p)"),
         ("i", input),
@@ -87,19 +87,6 @@ indexS (TwoStack i s) = [s !! fromInteger i]
 
 indexL :: TwoStack Integer [Object] -> Object
 indexL (TwoStack i l) = l !! fromInteger i
-
-string :: InterpAct ()
-string = do
-        x <- pop
-        case fromObject x of
-            Just lst -> do
-                str <- mapM toCharacter lst
-                push . Str $ str
-            Nothing -> error "Unreachable"
-    where
-    toCharacter :: Object -> InterpAct Char
-    toCharacter (Number e') = return $ chr . fromInteger $ e'
-    toCharacter e = throwError . BuiltinTypeError $ "Non-codepoint in toString " ++ show e
 
 typedPrint :: Object -> IO NoStack
 typedPrint (Str s) = putStrLn s >> return NoStack
@@ -189,6 +176,9 @@ instance (FromObject Object) where
 instance (FromObject Integer) where
     fromObject (Number x') = Just x'
     fromObject _ = Nothing
+
+instance (FromObject Int) where
+    fromObject = fmap fromInteger . fromObject
 
 instance (FromObject String) where
     fromObject (Str x') = Just x'
