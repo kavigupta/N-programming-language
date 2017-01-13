@@ -17,6 +17,7 @@ builtins = fromList [
         ("∥", void (pop >> pop)),
         ("+", numberOperator (+)),
         ("-", sub),
+        ("d", subtract (1 :: Integer) <|> builtInError "Attempted to Decrement non number"),
         ("*", numberOperator (*)),
         ("/", numberOperator div),
         ("%", numberOperator mod),
