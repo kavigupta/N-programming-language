@@ -6,6 +6,7 @@
 \usepackage{longtable}
 \usepackage[hidelinks]{hyperref}
 \usepackage{textcomp}
+\usepackage{amssymb}
 
 \author{Kavi Gupta}
 \date{December 30, 2016}
@@ -54,6 +55,7 @@
     ! & ! & A33 & Symbol & Factorial & {N@(N1N-\$1¦*\$)(1)0N=\$?\$}\$\\
     " & " & A34 & Special & N/A & \\
     \# & \# & A35 & Special & N/A & \\
+    $\parallel$ & \escape{"} & A36 & Symbol & Pop Two\\
     \% & \% & A37 & Symbol & Modulus & \\
     $\cdot$ & \escape{*} & a38 & Symbol & No operation & \\
     ' & ' & A39 & Symbol & Unmapped &\\
@@ -76,12 +78,12 @@
     $]$ & $]$ & A93 & Symbol & Set To Value & \\
     \^{} & \^{} & A94 & Symbol & Exponentiate & \\
     \_ & \_ & A95 & Symbol & Compose & \\
-    \`{} & \`{} & A96 & Symbol & Pop & \\
+    \`{} & \`{} & A96 & Symbol & Pop One & \\
     \{ & \{ & A123 & Special & N/A & \\
     | & | & A124 & Symbol & Push Current Block &\\
     \} & \} & A125 & Special & N/A & \\
     \textasciitilde & \textasciitilde & A126 & Action & Lookup Name\\
-    \textbrokenbar{} & \escape{|} & a127 & Action & Pop number and get level &\\ 
+    \textbrokenbar{} & \escape{|} & a127 & Action & Pop number and get level &\\
     \hline
 \end{tabular}
 
@@ -107,7 +109,9 @@
     p & p & A112 & Symbol & Print & \\
     q & q & A113 & Action & Push Code onto String & \\
     r & r & A114 & Symbol & range & \\
-    <s..z> & <s..z> & A115-A122 & Symbol & Unmapped & \\
+    <s..v> & <s..v> & A115-A1118 & Symbol & Unmapped & \\
+    w & w & A119 & Symbol & While Loop & 1\&($\beta$\$$\beta$1\textbrokenbar{})$\parallel$?\$)\\
+    <x..z> & <x..z> & A120-A122 & Symbol & Unmapped & \\
     \hline
 \end{tabular}
 

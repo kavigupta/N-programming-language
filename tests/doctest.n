@@ -47,3 +47,9 @@ C
 Hello, World!
 >>> ql$#126#32r$-$c$
 " !\"%&'()*+,./045789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abdefghijkmnopstuvwxyz{|}~"
+>>> 5(;p$d$)w$
+5
+4
+3
+2
+1

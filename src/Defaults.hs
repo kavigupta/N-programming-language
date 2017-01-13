@@ -12,6 +12,7 @@ import StackManip
 builtins :: Map String (InterpAct ())
 builtins = fromList [
         ("`", void pop),
+        ("∥", void (pop >> pop)),
         ("+", numberOperator (+)),
         ("-", sub),
         ("*", numberOperator (*)),
@@ -35,6 +36,7 @@ library :: Map String String
 library = fromList [
         ("!", "{N@0N=$(1)(N1N-$1¦*$)?$}$"),
         ("e", "0r$"),
+        ("w", "1&(β$β1¦)∥?$"),
         ("∑", "0{N@2&n$(`N)(.$N+$1¦)?$}$")
     ]
 

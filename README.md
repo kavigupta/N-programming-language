@@ -31,6 +31,24 @@ Pushes the program's source (`q`) then converts to a list of codepoints (`l$`), 
 
 This reads an integer from STDIN, then runs a program that prints the top of the stack at least once but then exits if and only if its a 0.
 
+## While Loop
+
+```N
+1&(β$β1¦)∥?$
+```
+
+This executes its first argument as long as the top element on the stack after it is truthy. This element is discarded when done. It works by first duplicating the conditional value and then testing it. If its truthy, the code copies the top of the stack into the β register, runs the code, pushes the value back onto the stack, and then executes the while loop again. If falsy, it pops both the code and the tested value off the stack.
+
+This is `w` in the standard library.
+
+## List Fold
+
+```N
+I@A@L@IL()
+```
+
+Takes three arguments: initial, accumulator, list.
+
 ## Sum of a List
 
 ```N
