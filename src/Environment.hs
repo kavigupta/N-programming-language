@@ -14,6 +14,7 @@ module Environment (
 ) where
 
 import AST(AST, printCode)
+import RegFile
 
 import Prelude hiding((!!), lookup)
 import Control.Monad.State
@@ -89,10 +90,14 @@ data InterpreterError
     | LibraryError ParseError
         deriving Show
 
-type InterpAct x = ReaderT [Object] (StateT FullEnv (ReaderT String (ExceptT InterpreterError IO))) x
+type InterpAct x = ReaderT [Object] (StateT FullEnv (StateT (RegFile Object) (ReaderT String (ExceptT InterpreterError IO)))) x
 
 deInterp :: InterpAct () -> Map String Object -> [Object] -> [AST] -> ReaderT String (ExceptT InterpreterError IO) FullEnv
-deInterp x items initial ast = snd <$> runStateT (runReaderT x [Code ast newFrame]) (FullEnv (Environment items) $ Stack initial)
+deInterp x items initial ast = snd . fst <$> withEnv
+    where
+    withEnv = runStateT withRegs initialRegFile
+    withRegs = runStateT withAST $ FullEnv (Environment items) (Stack initial)
+    withAST = runReaderT x [Code ast newFrame]
 
 push :: Object -> InterpAct ()
 push x = do
