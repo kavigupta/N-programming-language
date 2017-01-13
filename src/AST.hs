@@ -13,6 +13,7 @@ data AST =
     | Parents
     | Quine
     | Conditional
+    | Swap
     | Register RegisterIndex
     | Code [AST]
     | LString String

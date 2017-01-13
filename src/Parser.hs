@@ -23,6 +23,7 @@ atom = do
     case c of
         '@' -> return Definition
         '&' -> return Index
+        'ω' -> return Swap
         '~' -> return Lookup
         ';' -> return Duplicate
         '|' -> return Self

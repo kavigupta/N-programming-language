@@ -40,6 +40,11 @@ interpret Definition = do
 interpret Self = do
     x <- ask
     push (head x)
+interpret Swap = do
+    x <- pop
+    y <- pop
+    push x
+    push y
 interpret Parents = do
     nesting <- pop
     values <- ask
