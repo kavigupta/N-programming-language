@@ -68,9 +68,7 @@ interpret Quine = do
 interpret Execute = do
     code <- pop
     case code of
-        Object.Code c e' -> local (code:) . saveAndRestoreEnvironment $ do
-            setEnv e'
-            mapM_ interpret c
+        Object.Code c e' -> local (code:) . localEnv e' $ mapM_ interpret c
         Object.PrimitiveFunction _ v -> v
         o -> throwError $ ExecutedNonCodeError o
 interpret Conditional = do
@@ -88,10 +86,8 @@ interpret Conditional = do
     truthy (PrimitiveFunction _ _) = True
 interpret (Register r) = interpretRegAct pop push r
 interpret (AST.Code c) = do
-    e <- getEnv
-    push (Object.Code c e)
+    closure <- close c
+    push closure
 interpret (LString s) = push (Str s)
 interpret (LNumber n) = push (Number n)
-interpret (NewFrame x) = saveAndRestoreEnvironment $ do
-    setEnv newFrame
-    interpret x
+interpret (NewFrame x) = localEnv newFrame $ interpret x

@@ -48,9 +48,7 @@ indexBuiltinFunction implicitLiteral name = case lookup name builtins of
     Nothing -> case lookup name library of
         Just x -> case parseN x of
             Left err -> throwError $ LibraryError err
-            Right ast -> do
-                e <- getEnv
-                return $ Code ast e
+            Right ast -> close ast
         Nothing -> if implicitLiteral then return $ Str name else throwError $ UnboundVariable name
 
 equality :: TwoStack FObject FObject -> Integer

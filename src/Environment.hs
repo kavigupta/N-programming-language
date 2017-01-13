@@ -1,16 +1,16 @@
-{-# LANGUAGE DoAndIfThenElse, FlexibleContexts, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DoAndIfThenElse, FlexibleContexts, GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Environment (
     FObject,
     FullEnv,
     InterpreterError(..),
     InterpAct(..),
-    getEnv, setEnv,
     push, pop, indexStack,
     newFrame, lookupE, (=:=),
     objEqual,
     deInterp,
-    saveAndRestoreEnvironment,
-    result, contents
+    localEnv,
+    result, contents,
+    close
 ) where
 
 import AST(AST)
@@ -26,19 +26,21 @@ import Data.List.Safe hiding (lookup, insert)
 
 import Text.Parsec
 
+import Control.Lens
+
 type FObject = Object Environment (InterpAct ())
 
-data Environment = Environment {mappings :: Map String FObject}
+data Environment = Environment {_mappings :: Map String FObject}
 
 instance Show Environment where
     show (Environment m) = "{" ++ intercalate ", " (item <$> toList m) ++ "}"
         where
         item (x, y) = x ++ "=" ++ show y
 
-newtype Stack = Stack [FObject]
+newtype Stack = Stack {_unStack :: [FObject]}
     deriving (Show)
 
-data FullEnv = FullEnv {environment :: Environment, stack :: Stack}
+data FullEnv = FullEnv {_environment :: Environment, _stack :: Stack}
     deriving Show
 
 data InterpreterError
@@ -58,6 +60,10 @@ data InterpreterError
 newtype InterpAct x = InterpAct {runInterpAct :: ReaderT [FObject] (StateT (FullEnv, RegFile FObject) (ReaderT String (ExceptT InterpreterError IO))) x}
     deriving (Functor, Applicative, Monad, MonadIO, MonadError InterpreterError, MonadReader [FObject], MonadState (FullEnv, RegFile FObject))
 
+makeLenses ''Stack
+makeLenses ''Environment
+makeLenses ''FullEnv
+
 deInterp :: InterpAct () -> Map String FObject -> [FObject] -> [AST] -> ReaderT String (ExceptT InterpreterError IO) FullEnv
 deInterp x items initial ast = withRegs
     where
@@ -65,22 +71,20 @@ deInterp x items initial ast = withRegs
     withAST = runReaderT (runInterpAct x) [Code ast newFrame]
 
 push :: (MonadState (FullEnv, a) m) => FObject -> m ()
-push x = do
-    (Stack s) <- getStack
-    setStack . Stack $ x : s
+push x = _1 . stack . unStack %= (x:)
 
 pop :: (MonadState (FullEnv, a) m, MonadError InterpreterError m) => m FObject
 pop = do
-    s <- getStack
+    s <- use $ _1 . stack . unStack
     case s of
-        Stack [] -> throwError StackUnderflow
-        Stack (o:os) -> do
-            setStack $ Stack os
+        [] -> throwError StackUnderflow
+        (o:os) -> do
+            _1 . stack . unStack .= os
             return o
 
 indexStack :: Integer -> InterpAct FObject
 indexStack n = do
-    (Stack s) <- getStack
+    s <- use $ _1 . stack . unStack
     case s !! n of
         Nothing -> throwError StackUnderflow
         Just x -> return x
@@ -89,59 +93,35 @@ type Defaults = Bool -> String -> InterpAct FObject
 
 lookupE :: Defaults -> Bool -> String -> InterpAct FObject
 lookupE indexBuiltinFunction implicitLiteral s = do
-    frames <- getEnv
-    lookupIn indexBuiltinFunction implicitLiteral frames s
-
-lookupIn :: Defaults -> Bool -> Environment -> String -> InterpAct FObject
-lookupIn indexBuiltinFunction implicitLiteral f s = case s `lookup` mappings f of
+    f <- use $ _1 . environment . mappings
+    case s `lookup` f of
         Nothing -> indexBuiltinFunction implicitLiteral s
         (Just x) -> return x
 
 (=:=) :: FObject -> FObject -> InterpAct ()
 (Str var) =:= val   = do
-    (Environment f) <- getEnv
-
+    f <- use $ _1. environment . mappings
     if var `member` f then
         throwError $ MultipleAssignmentError var
     else
-        setEnv (Environment $ insert var val f)
+        _1 . environment .= (Environment $ insert var val f)
 var =:= _  = throwError $ BindingToNonStringError var
 
 newFrame :: Environment
 newFrame = Environment empty
 
-getStack :: (MonadState (FullEnv, a) m) => m Stack
-getStack = stack <$> getFEnv
-
-setStack :: (MonadState (FullEnv, a) m) => Stack -> m ()
-setStack s = do
-    e <- getEnv
-    putFEnv (FullEnv e s)
-
-getEnv :: (MonadState (FullEnv, a) m) => m Environment
-getEnv = environment <$> getFEnv
-
-setEnv :: (MonadState (FullEnv, a) m) => Environment -> m ()
-setEnv e = do
-    s <- getStack
-    putFEnv (FullEnv e s)
-
-saveAndRestoreEnvironment :: InterpAct () -> InterpAct ()
-saveAndRestoreEnvironment act = do
-    e <- getEnv
+localEnv :: Environment -> InterpAct () -> InterpAct ()
+localEnv env act = do
+    e <- use $ _1 . environment
+    _1 . environment .= env
     act
-    setEnv e
+    _1 . environment .= e
 
-getFEnv :: (MonadState (FullEnv, a) m) => m FullEnv
-getFEnv = fst <$> get
-
-putFEnv :: (MonadState (FullEnv, a) m) => FullEnv -> m ()
-putFEnv e = do
-    (_, b) <- get
-    put (e, b)
+close :: [AST] -> InterpAct FObject
+close ast = Code ast <$> use (_1 . environment)
 
 result :: FullEnv -> [FObject]
-result FullEnv {stack=Stack l} = l
+result e = e ^. stack . unStack
 
 contents :: FullEnv -> Map String FObject
-contents FullEnv {environment=Environment e} = e
+contents e = e ^. environment . mappings
