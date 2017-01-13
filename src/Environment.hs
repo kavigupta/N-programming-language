@@ -123,7 +123,7 @@ type Defaults = Bool -> String -> InterpAct Object
 
 lookupE :: Defaults -> Bool -> String -> InterpAct Object
 lookupE indexBuiltinFunction implicitLiteral s = do
-    (FullEnv frames _) <- getFEnv
+    frames <- getEnv
     lookupIn indexBuiltinFunction implicitLiteral frames s
 
 lookupIn :: Defaults -> Bool -> Environment -> String -> InterpAct Object
@@ -133,12 +133,12 @@ lookupIn indexBuiltinFunction implicitLiteral f s = case s `lookup` mappings f o
 
 (=:=) :: Object -> Object -> InterpAct ()
 (Str var) =:= val   = do
-    (FullEnv (Environment f) s) <- getFEnv
+    (Environment f) <- getEnv
 
     if var `member` f then
         throwError $ MultipleAssignmentError var
     else
-        putFEnv $ FullEnv (Environment $ insert var val f) s
+        setEnv (Environment $ insert var val f)
 var =:= _  = throwError $ BindingToNonStringError var
 
 newFrame :: Environment
@@ -162,7 +162,7 @@ setEnv e = do
 
 saveAndRestoreEnvironment :: InterpAct () -> InterpAct ()
 saveAndRestoreEnvironment act = do
-    (FullEnv e _) <- getFEnv
+    e <- getEnv
     act
     setEnv e
 
