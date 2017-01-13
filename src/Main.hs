@@ -67,7 +67,7 @@ pFromS :: Switches -> IO Parameters
 pFromS (Switches [] []) = return $ Parameters True Nothing
 pFromS (Switches ["i"] []) = return $ Parameters True Nothing
 pFromS (Switches tags [item])
-    | null $ tags \\ ["i", "e"] = Parameters ("i" `elem` tags) . Just <$> if "e" `elem` tags then return item else readFile item 
+    | null $ tags \\ ["i", "e"] = Parameters ("i" `elem` tags) . Just <$> if "e" `elem` tags then return item else readFile item
     | otherwise = usage
 pFromS _ = usage
 
