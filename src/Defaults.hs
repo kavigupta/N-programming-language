@@ -41,7 +41,7 @@ library = fromList [
         ("e", "0r$"),
         ("w", "1&(β$β1¦)∥?$"),
         ("f", "{ωA@ω(.$γA$γ)w$}$"),
-        ("∑", "0{N@2&n$(`N)(.$N+$1¦)?$}$")
+        ("∑", "+0f$")
     ]
 
 indexBuiltinFunction :: Bool -> String -> InterpAct FObject

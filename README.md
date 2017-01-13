@@ -52,10 +52,10 @@ Takes three arguments: initial, accumulator, list. Equivalent of `foldl` in hask
 ## Sum of a List
 
 ```N
-0{N@(.$N+$1¦)(`N)2&n$?$}$
++0f$
 ```
 
-This program takes pushes 0 to the stack, then repeatedly removes the top of the list and adds it to this number.
+This program takes pushes 0 to the stack, then repeatedly removes the top of the list and adds it to this number. This is `∑` in the standard library.
 
 ## Machine that Runs Indefinitely But Halts
 
