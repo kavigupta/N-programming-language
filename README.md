@@ -44,10 +44,10 @@ This is `w` in the standard library.
 ## List Fold
 
 ```N
-I@A@L@IL()
+{ωA@ω(.$γA$γ)w$}$
 ```
 
-Takes three arguments: initial, accumulator, list.
+Takes three arguments: initial, accumulator, list. Equivalent of `foldl` in haskell because it accumulates from the top of the stack (left of the list). This is `f` in the standard library.
 
 ## Sum of a List
 
