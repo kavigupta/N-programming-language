@@ -6,6 +6,7 @@ import Text.Parsec
 import Data.Functor.Identity
 
 import AST
+import RegFile
 
 type Parser b = ParsecT String () Identity b
 
@@ -29,6 +30,10 @@ atom = do
         '$' -> return Execute
         'q' -> return Quine
         '?' -> return Conditional
+        'α' -> return $ Register Alpha
+        'β' -> return $ Register Beta
+        'γ' -> return $ Register Gamma
+        'δ' -> return $ Register Delta
         x   -> return $ Symbol x
 
 lString, code, braced, lNumber :: Parser AST

@@ -1,9 +1,10 @@
 module Interpreter(interpret, deInterp, fullInterpreter, runInterpreter) where
-    
+
 import Environment
 import AST
 import Defaults
 import Parser
+import RegFile
 
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -20,7 +21,7 @@ runInterpreter s v = fmap snd <$> fullInterpreter s M.empty v
 fullInterpreter :: String -> M.Map String Object -> [Object] -> IO (Either SomeError (M.Map String Object, [Object]))
 fullInterpreter input initialE initalS = case parseN input of
     Left err -> return . Left $ ParseError err
-    Right ast -> do 
+    Right ast -> do
         v <- runExceptT $ runReaderT (deInterp (mapM_ interpret ast) initialE initalS ast) input
         case v of
             Left err -> return . Left $ RuntimeError err
@@ -84,7 +85,7 @@ interpret Conditional = do
     truthy Nil = False
     truthy (Pair _ _) = True
     truthy (PrimitiveFunction _ _) = True
-
+interpret (Register r) = interpretRegAct pop push r
 interpret (AST.Code c) = do
     e <- getEnv
     push (Environment.Code c e)
