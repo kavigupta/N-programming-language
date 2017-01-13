@@ -2,7 +2,7 @@
 module Environment (
     FObject,
     FullEnv,
-    InterpreterError(..),
+    FInterpreterError,
     InterpAct(..),
     push, pop, indexStack,
     newFrame, lookupE, (=:=),
@@ -16,6 +16,7 @@ module Environment (
 import AST(AST)
 import RegFile
 import Object
+import Error
 
 import Prelude hiding((!!), lookup)
 import Control.Monad.State
@@ -24,11 +25,10 @@ import Control.Monad.Except
 import Data.Map hiding (map)
 import Data.List.Safe hiding (lookup, insert)
 
-import Text.Parsec
-
 import Control.Lens
 
 type FObject = Object Environment (InterpAct ())
+type FInterpreterError = InterpreterError Environment (InterpAct ())
 
 data Environment = Environment {_mappings :: Map String FObject}
 
@@ -43,28 +43,15 @@ newtype Stack = Stack {_unStack :: [FObject]}
 data FullEnv = FullEnv {_environment :: Environment, _stack :: Stack}
     deriving Show
 
-data InterpreterError
-    = UnboundVariable String
-    | CriticalError String
-    | StackUnderflow
-    | MultipleAssignmentError String
-    | BindingToNonStringError FObject
-    | LookingUpNonStringError FObject
-    | IndexingWithNonNumberError FObject
-    | ExecutedNonCodeError FObject
-    | BuiltinTypeError String
-    | CannotCompareCodeError
-    | LibraryError ParseError
-        deriving Show
 
-newtype InterpAct x = InterpAct {runInterpAct :: ReaderT [FObject] (StateT (FullEnv, RegFile FObject) (ReaderT String (ExceptT InterpreterError IO))) x}
-    deriving (Functor, Applicative, Monad, MonadIO, MonadError InterpreterError, MonadReader [FObject], MonadState (FullEnv, RegFile FObject))
+newtype InterpAct x = InterpAct {runInterpAct :: ReaderT [FObject] (StateT (FullEnv, RegFile FObject) (ReaderT String (ExceptT FInterpreterError IO))) x}
+    deriving (Functor, Applicative, Monad, MonadIO, MonadError FInterpreterError, MonadReader [FObject], MonadState (FullEnv, RegFile FObject))
 
 makeLenses ''Stack
 makeLenses ''Environment
 makeLenses ''FullEnv
 
-deInterp :: InterpAct () -> Map String FObject -> [FObject] -> [AST] -> ReaderT String (ExceptT InterpreterError IO) FullEnv
+deInterp :: InterpAct () -> Map String FObject -> [FObject] -> [AST] -> ReaderT String (ExceptT FInterpreterError IO) FullEnv
 deInterp x items initial ast = withRegs
     where
     withRegs = fst . snd <$> runStateT withAST (FullEnv (Environment items) (Stack initial), initialRegFile)
@@ -73,11 +60,11 @@ deInterp x items initial ast = withRegs
 push :: (MonadState (FullEnv, a) m) => FObject -> m ()
 push x = _1 . stack . unStack %= (x:)
 
-pop :: (MonadState (FullEnv, a) m, MonadError InterpreterError m) => m FObject
+pop :: (MonadState (FullEnv, a) m, MonadError FInterpreterError m) => m FObject
 pop = do
     s <- use $ _1 . stack . unStack
     case s of
-        [] -> throwError StackUnderflow
+        [] -> underflow
         (o:os) -> do
             _1 . stack . unStack .= os
             return o
@@ -86,7 +73,7 @@ indexStack :: Integer -> InterpAct FObject
 indexStack n = do
     s <- use $ _1 . stack . unStack
     case s !! n of
-        Nothing -> throwError StackUnderflow
+        Nothing -> underflow
         Just x -> return x
 
 type Defaults = Bool -> String -> InterpAct FObject
@@ -102,10 +89,10 @@ lookupE indexBuiltinFunction implicitLiteral s = do
 (Str var) =:= val   = do
     f <- use $ _1. environment . mappings
     if var `member` f then
-        throwError $ MultipleAssignmentError var
+        multipleAssign var
     else
         _1 . environment .= (Environment $ insert var val f)
-var =:= _  = throwError $ BindingToNonStringError var
+var =:= _  = lookupNonString var
 
 newFrame :: Environment
 newFrame = Environment empty

@@ -6,6 +6,7 @@ import Defaults
 import Parser
 import RegFile
 import Object
+import Error
 
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -13,7 +14,7 @@ import Text.Parsec
 
 import qualified Data.Map as M
 
-data SomeError = ParseError ParseError | RuntimeError InterpreterError
+data SomeError = ParseError ParseError | RuntimeError FInterpreterError
     deriving Show
 
 runInterpreter :: String -> [FObject] -> IO (Either SomeError [FObject])
@@ -45,19 +46,19 @@ interpret Parents = do
     case nesting of
         Number n
             | n >= 0 && n < toInteger (length values) -> push (values !! fromInteger n) >> interpret Execute
-        o -> throwError . IndexingWithNonNumberError $ o
+        o -> indexWithNoNumber o
 interpret Index = do
     index <- pop
     case index of
         Number n -> indexStack n >>= push
-        o -> throwError $ IndexingWithNonNumberError o
+        o -> indexWithNoNumber o
 interpret Lookup = do
     name <- pop
     case name of
         Str s -> do
             val <- lookupE indexBuiltinFunction False s
             push val
-        o -> throwError $ LookingUpNonStringError o
+        o -> lookupNonString o
 interpret Duplicate = do
     x <- pop
     push x
@@ -70,7 +71,7 @@ interpret Execute = do
     case code of
         Object.Code c e' -> local (code:) . localEnv e' $ mapM_ interpret c
         Object.PrimitiveFunction _ v -> v
-        o -> throwError $ ExecutedNonCodeError o
+        o -> executeNonCode o
 interpret Conditional = do
         alternative <- pop
         consequent <- pop
