@@ -89,19 +89,10 @@ data InterpreterError
     | LibraryError ParseError
         deriving Show
 
--- type Action = FullEnv -> Either InterpreterError FullEnv
-
 type InterpAct x = ReaderT [Object] (StateT FullEnv (ReaderT String (ExceptT InterpreterError IO))) x
 
 deInterp :: InterpAct () -> Map String Object -> [Object] -> [AST] -> ReaderT String (ExceptT InterpreterError IO) FullEnv
 deInterp x items initial ast = snd <$> runStateT (runReaderT x [Code ast newFrame]) (FullEnv (Environment items) $ Stack initial)
---
--- interp :: Action -> InterpAct ()
--- interp act = do
---     es <- get
---     case act es of
---         Left err -> throwError err
---         Right x -> put x
 
 push :: Object -> InterpAct ()
 push x = do
