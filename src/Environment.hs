@@ -1,4 +1,4 @@
-{-# LANGUAGE DoAndIfThenElse #-}
+{-# LANGUAGE DoAndIfThenElse, FlexibleContexts #-}
 module Environment (
     Object(..),
     FullEnv,
@@ -90,21 +90,20 @@ data InterpreterError
     | LibraryError ParseError
         deriving Show
 
-type InterpAct x = ReaderT [Object] (StateT FullEnv (StateT (RegFile Object) (ReaderT String (ExceptT InterpreterError IO)))) x
+type InterpAct x = ReaderT [Object] (StateT (FullEnv, RegFile Object) (ReaderT String (ExceptT InterpreterError IO))) x
 
 deInterp :: InterpAct () -> Map String Object -> [Object] -> [AST] -> ReaderT String (ExceptT InterpreterError IO) FullEnv
-deInterp x items initial ast = snd . fst <$> withEnv
+deInterp x items initial ast = withRegs
     where
-    withEnv = runStateT withRegs initialRegFile
-    withRegs = runStateT withAST $ FullEnv (Environment items) (Stack initial)
+    withRegs = fst . snd <$> runStateT withAST (FullEnv (Environment items) (Stack initial), initialRegFile)
     withAST = runReaderT x [Code ast newFrame]
 
-push :: Object -> InterpAct ()
+push :: (MonadState (FullEnv, a) m) => Object -> m ()
 push x = do
     (Stack s) <- getStack
     setStack . Stack $ x : s
 
-pop :: InterpAct Object
+pop :: (MonadState (FullEnv, a) m, MonadError InterpreterError m) => m Object
 pop = do
     s <- getStack
     case s of
@@ -124,7 +123,7 @@ type Defaults = Bool -> String -> InterpAct Object
 
 lookupE :: Defaults -> Bool -> String -> InterpAct Object
 lookupE indexBuiltinFunction implicitLiteral s = do
-    (FullEnv frames _) <- get
+    (FullEnv frames _) <- getFEnv
     lookupIn indexBuiltinFunction implicitLiteral frames s
 
 lookupIn :: Defaults -> Bool -> Environment -> String -> InterpAct Object
@@ -134,38 +133,46 @@ lookupIn indexBuiltinFunction implicitLiteral f s = case s `lookup` mappings f o
 
 (=:=) :: Object -> Object -> InterpAct ()
 (Str var) =:= val   = do
-    (FullEnv (Environment f) s) <- get
+    (FullEnv (Environment f) s) <- getFEnv
 
     if var `member` f then
         throwError $ MultipleAssignmentError var
     else
-        put $ FullEnv (Environment $ insert var val f) s
+        putFEnv $ FullEnv (Environment $ insert var val f) s
 var =:= _  = throwError $ BindingToNonStringError var
 
 newFrame :: Environment
 newFrame = Environment empty
 
-getStack :: InterpAct Stack
-getStack = stack <$> get
+getStack :: (MonadState (FullEnv, a) m) => m Stack
+getStack = stack <$> getFEnv
 
-setStack :: Stack -> InterpAct ()
+setStack :: (MonadState (FullEnv, a) m) => Stack -> m ()
 setStack s = do
     e <- getEnv
-    put (FullEnv e s)
+    putFEnv (FullEnv e s)
 
-getEnv :: InterpAct Environment
-getEnv = environment <$> get
+getEnv :: (MonadState (FullEnv, a) m) => m Environment
+getEnv = environment <$> getFEnv
 
-setEnv :: Environment -> InterpAct ()
+setEnv :: (MonadState (FullEnv, a) m) => Environment -> m ()
 setEnv e = do
     s <- getStack
-    put (FullEnv e s)
+    putFEnv (FullEnv e s)
 
 saveAndRestoreEnvironment :: InterpAct () -> InterpAct ()
 saveAndRestoreEnvironment act = do
-    (FullEnv e _) <- get
+    (FullEnv e _) <- getFEnv
     act
     setEnv e
+
+getFEnv :: (MonadState (FullEnv, a) m) => m FullEnv
+getFEnv = fst <$> get
+
+putFEnv :: (MonadState (FullEnv, a) m) => FullEnv -> m ()
+putFEnv e = do
+    (_, b) <- get
+    put (e, b)
 
 result :: FullEnv -> [Object]
 result FullEnv {stack=Stack l} = l
