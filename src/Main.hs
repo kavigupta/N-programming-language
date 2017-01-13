@@ -45,7 +45,7 @@ nInteractWith e = do
                 Nothing -> nInteractWith e
                 Just e' -> nInteractWith e'
 
-type Env = M.Map String Object
+type Env = M.Map String FObject
 
 data Parameters = Parameters { interactive :: Bool, code :: Maybe String }
 
@@ -53,7 +53,7 @@ data Switches = Switches {switches :: [String], nonSwitches :: [String]}
 
 parseSwitches :: Bool -> [String] -> Switches
 parseSwitches _ [] = Switches [] []
-parseSwitches False items = Switches [] items 
+parseSwitches False items = Switches [] items
 parseSwitches True ("--":rest) = parseSwitches False rest
 parseSwitches True (top:rest)
         = case top of

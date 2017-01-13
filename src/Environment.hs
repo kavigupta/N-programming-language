@@ -1,9 +1,9 @@
-{-# LANGUAGE DoAndIfThenElse, FlexibleContexts #-}
+{-# LANGUAGE DoAndIfThenElse, FlexibleContexts, GeneralizedNewtypeDeriving #-}
 module Environment (
-    Object(..),
+    FObject,
     FullEnv,
     InterpreterError(..),
-    InterpAct,
+    InterpAct(..),
     getEnv, setEnv,
     push, pop, indexStack,
     newFrame, lookupE, (=:=),
@@ -13,8 +13,9 @@ module Environment (
     result, contents
 ) where
 
-import AST(AST, printCode)
+import AST(AST)
 import RegFile
+import Object
 
 import Prelude hiding((!!), lookup)
 import Control.Monad.State
@@ -22,55 +23,19 @@ import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Map hiding (map)
 import Data.List.Safe hiding (lookup, insert)
-import qualified Data.List as L
 
 import Text.Parsec
 
-data Object =
-      Number Integer
-    | Nil
-    | Str String
-    | Code [AST] Environment
-    | Pair Object Object
-    | PrimitiveFunction String (InterpAct ())
+type FObject = Object Environment (InterpAct ())
 
-instance Show Object where
-    show (Number x) = show x
-    show Nil = "()"
-    show (Str s) = show s
-    show (Environment.Code c e) = code ++ ":" ++ show e
-        where
-        code = "[" ++ L.intercalate "," (map printCode c) ++ "]"
-    show (Pair car cdr) = "(" ++ withNoParens car cdr ++ ")"
-    show (PrimitiveFunction name _) = "#" ++ name
-
-objEqual :: Object -> Object -> Bool
-objEqual (Number x) (Number y)  = x == y
-objEqual (Number _) _           = False
-objEqual (Str x) (Str y)        = x == y
-objEqual (Str _) _              = False
-objEqual Nil Nil                = True
-objEqual Nil _                  = False
-objEqual (Pair a b) (Pair c d)  = objEqual a c && objEqual b d
-objEqual (Pair _ _) _           = False
-objEqual (Code _ _) (Code _ _)  = False
-objEqual (Code _ _) _           = False
-objEqual (PrimitiveFunction x _) (PrimitiveFunction y _) = x == y
-objEqual (PrimitiveFunction _ _) _ = False
-
-withNoParens :: Object -> Object -> String
-withNoParens car Nil = show car
-withNoParens car (Pair cadr cddr) = show car ++ " " ++ withNoParens cadr cddr
-withNoParens car cdr = show car ++ " . " ++ show cdr
-
-data Environment = Environment {mappings :: Map String Object}
+data Environment = Environment {mappings :: Map String FObject}
 
 instance Show Environment where
     show (Environment m) = "{" ++ intercalate ", " (item <$> toList m) ++ "}"
         where
         item (x, y) = x ++ "=" ++ show y
 
-newtype Stack = Stack [Object]
+newtype Stack = Stack [FObject]
     deriving (Show)
 
 data FullEnv = FullEnv {environment :: Environment, stack :: Stack}
@@ -81,29 +46,30 @@ data InterpreterError
     | CriticalError String
     | StackUnderflow
     | MultipleAssignmentError String
-    | BindingToNonStringError Object
-    | LookingUpNonStringError Object
-    | IndexingWithNonNumberError Object
-    | ExecutedNonCodeError Object
+    | BindingToNonStringError FObject
+    | LookingUpNonStringError FObject
+    | IndexingWithNonNumberError FObject
+    | ExecutedNonCodeError FObject
     | BuiltinTypeError String
     | CannotCompareCodeError
     | LibraryError ParseError
         deriving Show
 
-type InterpAct x = ReaderT [Object] (StateT (FullEnv, RegFile Object) (ReaderT String (ExceptT InterpreterError IO))) x
+newtype InterpAct x = InterpAct {runInterpAct :: ReaderT [FObject] (StateT (FullEnv, RegFile FObject) (ReaderT String (ExceptT InterpreterError IO))) x}
+    deriving (Functor, Applicative, Monad, MonadIO, MonadError InterpreterError, MonadReader [FObject], MonadState (FullEnv, RegFile FObject))
 
-deInterp :: InterpAct () -> Map String Object -> [Object] -> [AST] -> ReaderT String (ExceptT InterpreterError IO) FullEnv
+deInterp :: InterpAct () -> Map String FObject -> [FObject] -> [AST] -> ReaderT String (ExceptT InterpreterError IO) FullEnv
 deInterp x items initial ast = withRegs
     where
     withRegs = fst . snd <$> runStateT withAST (FullEnv (Environment items) (Stack initial), initialRegFile)
-    withAST = runReaderT x [Code ast newFrame]
+    withAST = runReaderT (runInterpAct x) [Code ast newFrame]
 
-push :: (MonadState (FullEnv, a) m) => Object -> m ()
+push :: (MonadState (FullEnv, a) m) => FObject -> m ()
 push x = do
     (Stack s) <- getStack
     setStack . Stack $ x : s
 
-pop :: (MonadState (FullEnv, a) m, MonadError InterpreterError m) => m Object
+pop :: (MonadState (FullEnv, a) m, MonadError InterpreterError m) => m FObject
 pop = do
     s <- getStack
     case s of
@@ -112,26 +78,26 @@ pop = do
             setStack $ Stack os
             return o
 
-indexStack :: Integer -> InterpAct Object
+indexStack :: Integer -> InterpAct FObject
 indexStack n = do
     (Stack s) <- getStack
     case s !! n of
         Nothing -> throwError StackUnderflow
         Just x -> return x
 
-type Defaults = Bool -> String -> InterpAct Object
+type Defaults = Bool -> String -> InterpAct FObject
 
-lookupE :: Defaults -> Bool -> String -> InterpAct Object
+lookupE :: Defaults -> Bool -> String -> InterpAct FObject
 lookupE indexBuiltinFunction implicitLiteral s = do
     frames <- getEnv
     lookupIn indexBuiltinFunction implicitLiteral frames s
 
-lookupIn :: Defaults -> Bool -> Environment -> String -> InterpAct Object
+lookupIn :: Defaults -> Bool -> Environment -> String -> InterpAct FObject
 lookupIn indexBuiltinFunction implicitLiteral f s = case s `lookup` mappings f of
         Nothing -> indexBuiltinFunction implicitLiteral s
         (Just x) -> return x
 
-(=:=) :: Object -> Object -> InterpAct ()
+(=:=) :: FObject -> FObject -> InterpAct ()
 (Str var) =:= val   = do
     (Environment f) <- getEnv
 
@@ -174,8 +140,8 @@ putFEnv e = do
     (_, b) <- get
     put (e, b)
 
-result :: FullEnv -> [Object]
+result :: FullEnv -> [FObject]
 result FullEnv {stack=Stack l} = l
 
-contents :: FullEnv -> Map String Object
+contents :: FullEnv -> Map String FObject
 contents FullEnv {environment=Environment e} = e

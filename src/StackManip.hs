@@ -5,17 +5,18 @@ import Control.Monad.Except
 import Data.Char
 
 import Environment
+import Object
 
 data TwoStack a b = TwoStack a b
 
 class ToObject a where
-    toObject :: a -> Object
+    toObject :: a -> FObject
 
 class ToStack a where
     toStack :: a -> InterpAct ()
 
 class FromObject a where
-    fromObject :: Object -> Maybe a
+    fromObject :: FObject -> Maybe a
 
 class FromStack a where
     fromStack :: InterpAct (Maybe a)
@@ -43,7 +44,7 @@ instance (ToStack a) => ToStack (IO a) where
 instance ToObject Integer where
     toObject = Number
 
-instance ToObject Object where
+instance ToObject FObject where
     toObject = id
 
 instance ToObject String where
@@ -62,7 +63,7 @@ instance {-# OVERLAPPABLE #-} (FromObject a) => FromStack a where
             Just y -> return (Just y)
             Nothing -> push x >> return Nothing
 
-instance (FromObject Object) where
+instance (FromObject FObject) where
     fromObject = Just
 
 instance (FromObject Integer) where
@@ -94,7 +95,7 @@ instance (FromObject a, FromObject b) => (FromObject (a, b)) where
     fromObject (Pair b a) = liftM2 (,) (fromObject a) (fromObject b)
     fromObject _ = Nothing
 
-dedotify :: Object -> Object -> [Object]
+dedotify :: FObject -> FObject -> [FObject]
 dedotify car Nil = [car]
 dedotify car (Pair cadr cddr) = car : dedotify cadr cddr
 dedotify car cdr = [car, cdr]

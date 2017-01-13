@@ -5,6 +5,7 @@ import AST
 import Defaults
 import Parser
 import RegFile
+import Object
 
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -15,10 +16,10 @@ import qualified Data.Map as M
 data SomeError = ParseError ParseError | RuntimeError InterpreterError
     deriving Show
 
-runInterpreter :: String -> [Object] -> IO (Either SomeError [Object])
+runInterpreter :: String -> [FObject] -> IO (Either SomeError [FObject])
 runInterpreter s v = fmap snd <$> fullInterpreter s M.empty v
 
-fullInterpreter :: String -> M.Map String Object -> [Object] -> IO (Either SomeError (M.Map String Object, [Object]))
+fullInterpreter :: String -> M.Map String FObject -> [FObject] -> IO (Either SomeError (M.Map String FObject, [FObject]))
 fullInterpreter input initialE initalS = case parseN input of
     Left err -> return . Left $ ParseError err
     Right ast -> do
@@ -62,15 +63,15 @@ interpret Duplicate = do
     push x
     push x
 interpret Quine = do
-    program <- lift ask
+    program <- InterpAct $ lift ask
     push (Str program)
 interpret Execute = do
     code <- pop
     case code of
-        Environment.Code c e' -> local (code:) . saveAndRestoreEnvironment $ do
+        Object.Code c e' -> local (code:) . saveAndRestoreEnvironment $ do
             setEnv e'
             mapM_ interpret c
-        Environment.PrimitiveFunction _ v -> v
+        Object.PrimitiveFunction _ v -> v
         o -> throwError $ ExecutedNonCodeError o
 interpret Conditional = do
         alternative <- pop
@@ -78,17 +79,17 @@ interpret Conditional = do
         condition <- pop
         push $ if truthy condition then consequent else alternative
     where
-    truthy :: Object -> Bool
+    truthy :: FObject -> Bool
     truthy (Number x) = x /= 0
     truthy (Str s) = s /= ""
-    truthy (Environment.Code c _) = c /= []
+    truthy (Object.Code c _) = c /= []
     truthy Nil = False
     truthy (Pair _ _) = True
     truthy (PrimitiveFunction _ _) = True
 interpret (Register r) = interpretRegAct pop push r
 interpret (AST.Code c) = do
     e <- getEnv
-    push (Environment.Code c e)
+    push (Object.Code c e)
 interpret (LString s) = push (Str s)
 interpret (LNumber n) = push (Number n)
 interpret (NewFrame x) = saveAndRestoreEnvironment $ do
