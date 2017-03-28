@@ -1,27 +1,12 @@
 {-# LANGUAGE TemplateHaskell#-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Types where
+module TypeManipulation where
+
+import Type
 
 import Control.Monad.State
 import Control.Monad.Except
 import Control.Lens hiding (assignA)
 import Data.Map(Map, insert, empty, findWithDefault)
-
-newtype ASym = ASymbol {asym :: String} deriving (Eq, Ord, Show)
-newtype SSym = SSymbol {ssym :: String} deriving (Eq, Ord, Show)
-
-data Arity = Obj
-    | Seq Sequence
-    | ASym ASym
-        deriving (Show, Eq)
-
-data Action = Push Arity | Pop Arity
-    deriving (Show, Eq)
-
-data Sequence = Sequ [Action]
-    | SSym SSym
-    | Sequence :+: Sequence
-        deriving (Show, Eq)
 
 data Environment = Environment {_aMap :: Map ASym Arity, _sMap :: Map SSym Sequence} deriving Show
 
@@ -29,15 +14,6 @@ defaultEnvironment :: Environment
 defaultEnvironment = Environment empty empty
 
 makeLenses ''Environment
-
-typeOfPlus :: Arity
-typeOfPlus = Seq . Sequ $ [Pop Obj, Pop Obj, Push Obj]
-
-sX :: Sequence
-sX = SSym . SSymbol $ "x"
-
-typeOfAppliedPlus :: Arity
-typeOfAppliedPlus = Seq (Sequ [Push typeOfPlus, Pop (Seq sX)] :+: sX)
 
 type Unifier = StateT Environment (Either UnificationError)
 
