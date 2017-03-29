@@ -79,7 +79,7 @@ indexType :: Int -> Typer [Action]
 indexType 0 = return []
 indexType n = do
     vars <- replicateM n generateA
-    let popElems = Push <$> vars
-    let pushElems = Pop <$> reverse vars
+    let popElems = Pop <$> vars
+    let pushElems = Push <$> reverse vars
     return $ popElems ++ pushElems ++ [head pushElems]
     -- n = 3 --> -*, -(x), -(y), -(z), +(z), +(y), +(x), +(z)
