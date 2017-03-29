@@ -8,7 +8,7 @@ import Control.Monad.Except
 import Control.Lens hiding (assignA)
 import Data.Map(Map, insert, empty, findWithDefault, toList)
 
-data Environment = Environment {_aMap :: Map ASym Arity, _sMap :: Map SSym Sequence}
+data Environment = Environment {_aMap :: Map ASym Arity, _sMap :: Map SSym Action}
 
 instance Show Environment where
     show (Environment a s) = "{" ++ unwords (map show (toList a) ++ map show (toList s)) ++ "}"
@@ -30,7 +30,7 @@ data UnificationError = NotImplemented | Impossible | NoTypeApplicable
 assignA :: ASym -> Arity -> Unifier ()
 assignA a v = aMap %= insert a v
 
-assignS :: SSym -> Sequence -> Unifier ()
+assignS :: SSym -> Action -> Unifier ()
 assignS s v = sMap %= insert s v
 
 class Simplifiable u where
@@ -46,15 +46,10 @@ instance Unifiable Arity where
     unify (Seq a) (Seq b) = unify a b
     unify _ _ = throwError Impossible
 
-instance Unifiable Sequence where
-    unify (Sequ a) (Sequ b) = forM_ (zip a b) (uncurry unify)
+instance Unifiable Action where
+    unify (Appended a) (Appended b) = forM_ (zip a b) (uncurry unify)
     unify (SSym s) v = assignS s v
     unify v (SSym s) = assignS s v
-    unify (_ :+: _) _ = error "Not Implemented +L"
-    unify _ (_ :+: _) = error "Not Implemented +R"
-
-
-instance Unifiable Action where
     unify (Push a) (Push b) = unify a b
     unify (Pop a) (Pop b) = unify a b
     unify _ _ = throwError Impossible
@@ -66,34 +61,47 @@ instance Simplifiable Arity where
         m <- use aMap
         return $ findWithDefault (ASym s) s m
 
-simplifyCyclic :: (Eq a, Eq b, Simplifiable a, Simplifiable b) => (a, b) -> Unifier (a, b)
-simplifyCyclic (a, b) = do
-    a' <- simplify a
-    b' <- simplify b
-    if a' == a && b' == b then
-        return (a', b')
-    else
-        simplifyCyclic (a', b')
+instance (Eq a, Eq b, Simplifiable a, Simplifiable b) => Simplifiable (a, b) where
+    simplify (a, b) = do
+        a' <- simplify a
+        b' <- simplify b
+        if a' == a && b' == b then
+            return (a', b')
+        else
+            simplify (a', b')
 
-instance Simplifiable Sequence where
-    simplify (Sequ []) = return (Sequ [])
-    simplify (Sequ (Push a:Pop a':rest)) = do
-        unify a a'
-        simplify (Sequ rest)
-    simplify (Sequ (first:rest)) = do
-        (first', rest') <- simplifyCyclic (first, Sequ rest)
-        return $ case rest' of
-            Sequ rest'' -> Sequ (first':rest'')
-            other -> Sequ [first'] :+: other
+instance (Eq a, Simplifiable a) => Simplifiable [a] where
+    simplify xs = do
+        xs' <- mapM simplify xs
+        if xs == xs' then
+            return xs'
+        else
+            simplify xs'
+
+instance Simplifiable Action where
     simplify (SSym s) = do
         m <- use sMap
         return $ findWithDefault (SSym s) s m
-    simplify (a :+: b) = do
-        (a', b') <- simplifyCyclic (a, b)
-        return $ case (a', b') of
-            (Sequ x, Sequ y) -> Sequ (x ++ y)
-            (x, y) -> x :+: y
-
-instance Simplifiable Action where
+    simplify (Appended (Push a:Pop b:xs)) = do
+        unify a b
+        simplify $ Appended xs
+    simplify (Appended items) = do
+        items' <- simplify items
+        let result = appendSeqs items'
+        if result == Appended items then
+            return result
+        else
+            simplify result
     simplify (Push x) = Push <$> simplify x
     simplify (Pop x) = Pop <$> simplify x
+
+appendSeqs :: [Action] -> Action
+appendSeqs [] = Appended []
+appendSeqs [x] = x
+appendSeqs (Appended a:Appended b:xs) = appendSeqs (Appended (a ++ b) : xs)
+appendSeqs (Appended a:b:xs) = case appendSeqs (b:xs) of
+    (Appended (Appended u:v)) -> appendSeqs (Appended (a ++ u) : v)
+    y -> y
+appendSeqs (a:b:xs) = case appendSeqs (b:xs) of
+    Appended res -> Appended (a : res)
+    y -> Appended [a, y]
