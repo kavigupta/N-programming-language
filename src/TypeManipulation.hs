@@ -88,10 +88,12 @@ instance Simplifiable Action where
     simplify (Appended items) = do
         items' <- simplify items
         let result = appendSeqs items'
-        if result == Appended items then
-            return result
-        else
-            simplify result
+        result' <- case result of
+            Appended (x:xs) -> do
+                r <- simplify $ Appended xs
+                return $ appendSeqs [x, r]
+            u -> return u
+        (if result' == Appended items then return else simplify) result'
     simplify (Push x) = Push <$> simplify x
     simplify (Pop x) = Pop <$> simplify x
 
