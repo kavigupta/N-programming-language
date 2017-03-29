@@ -17,7 +17,10 @@ makeLenses ''Environment
 
 type Unifier = StateT Environment (Either UnificationError)
 
-data UnificationError = NotImplemented | Impossible
+runUnifierT :: Unifier x -> Either UnificationError (x, Environment)
+runUnifierT = flip runStateT defaultEnvironment
+
+data UnificationError = NotImplemented | Impossible | NoTypeApplicable
     deriving Show
 
 -- TODO circular dependencies?
