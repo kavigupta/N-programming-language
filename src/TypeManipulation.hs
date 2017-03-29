@@ -6,9 +6,12 @@ import Type
 import Control.Monad.State
 import Control.Monad.Except
 import Control.Lens hiding (assignA)
-import Data.Map(Map, insert, empty, findWithDefault)
+import Data.Map(Map, insert, empty, findWithDefault, toList)
 
-data Environment = Environment {_aMap :: Map ASym Arity, _sMap :: Map SSym Sequence} deriving Show
+data Environment = Environment {_aMap :: Map ASym Arity, _sMap :: Map SSym Sequence}
+
+instance Show Environment where
+    show (Environment a s) = "{" ++ unwords (map show (toList a) ++ map show (toList s)) ++ "}"
 
 defaultEnvironment :: Environment
 defaultEnvironment = Environment empty empty
